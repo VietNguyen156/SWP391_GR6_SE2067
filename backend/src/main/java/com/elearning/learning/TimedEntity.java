@@ -1,0 +1,15 @@
+package com.elearning.learning;
+
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+import java.time.LocalDateTime;
+
+@MappedSuperclass @Getter @Setter
+public abstract class TimedEntity {
+    @Id @GeneratedValue(strategy=GenerationType.IDENTITY) private Long id;
+    @Column(nullable=false, updatable=false) private LocalDateTime createdAt;
+    @Column(nullable=false) private LocalDateTime updatedAt;
+    @PrePersist void create() { createdAt=LocalDateTime.now(); updatedAt=createdAt; }
+    @PreUpdate void update() { updatedAt=LocalDateTime.now(); }
+}

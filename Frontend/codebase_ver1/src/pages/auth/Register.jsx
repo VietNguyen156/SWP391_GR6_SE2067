@@ -1,3 +1,0 @@
-import {Link,useNavigate} from 'react-router-dom';
-import React from "react";
-export default function Register(){const go=useNavigate();return <div className="auth"><form onSubmit={e=>{e.preventDefault();go('/user/dashboard')}}><h1>Create account</h1><p>Start your English learning journey.</p><label>Full name</label><input placeholder="Your name"/><label>Email</label><input type="email" placeholder="you@example.com"/><label>Password</label><input type="password" placeholder="••••••••"/><button className="primary">Register</button><p>Already have an account? <Link to="/login">Sign in</Link></p></form></div>}
