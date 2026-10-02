@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:toeic_test;MODE=MySQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  flyway:
+    enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+app:
+  jwt:
+    secret: test-only-secret-with-at-least-thirty-two-characters
+    access-expiration-ms: 900000
+    refresh-expiration-ms: 604800000
+  auth:
+    refresh-cookie-secure: false
+

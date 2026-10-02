@@ -1,120 +1,200 @@
-# TOEIC Path — React + Vite + Bootstrap + Spring Boot + MySQL
+# TOEIC Path Team Codebase
 
-## Chức năng mentor
+Codebase khởi đầu dành cho nhóm 5 người phát triển hệ thống học TOEIC. Dự án được thiết kế để mỗi thành viên làm trong một module riêng, dùng chung API contract và hạn chế tối đa conflict khi merge Git.
 
-Đã bổ sung tạo gói học phí, học viên đăng ký mua, admin xác nhận thanh toán,
-tạo lớp và thêm học viên bằng email. Xem [hướng dẫn cài đặt và sử dụng](docs/MENTOR.md).
-Nếu database mới chỉ có phần auth, chạy `docs/database/mentor_schema.sql` trước khi khởi động backend.
+> Đây là **starter codebase**, không phải sản phẩm đã hoàn thiện. Code mẫu hiện có luồng `React -> REST API -> Spring Boot -> MySQL` cho danh sách khóa học công khai.
 
-Project đã có luồng xác thực cơ bản chạy theo REST API:
+## 1. Công nghệ thống nhất
 
-- Homepage
-- Đăng ký học viên
-- Đăng nhập
-- JWT + BCrypt
-- Lưu phiên đăng nhập frontend
-- Đăng xuất
-- Quên mật khẩu / đặt lại mật khẩu
-- Endpoint `/api/auth/me`
+| Layer | Technology |
+|---|---|
+| Frontend | React 19, Vite 6, Bootstrap 5, Axios |
+| Backend | Java 17, Spring Boot 3.5, Spring Security, Spring Data JPA |
+| Database | MySQL 8, Flyway migrations |
+| API | RESTful API, prefix `/api/v1` |
+| Authentication | JWT access token và refresh token |
+| Source control | GitHub, feature branch và pull request |
 
-## Công nghệ
+## 2. Cấu trúc dự án
 
-- Frontend: ReactJS 19 + Vite + Bootstrap 5 + Axios + React Router
-- Backend: Java 21 + Spring Boot 3.5 + Spring Security + Spring Data JPA
-- Database: MySQL 8
-- Authentication: JWT + BCrypt
+```text
+TOEIC_PATH_TEAM_CODEBASE/
+├── backend/                     # Spring Boot + MySQL
+│   └── src/main/java/com/toeicpath/
+│       ├── auth/                # DEV 1
+│       ├── user/                # DEV 1
+│       ├── admin/               # DEV 2
+│       ├── packageplan/         # DEV 2
+│       ├── catalog/             # DEV 3
+│       ├── classroom/           # DEV 4
+│       ├── assessment/          # DEV 5
+│       ├── progress/            # DEV 5
+│       ├── common/              # Integration lead only
+│       └── config/              # Integration lead only
+├── frontend/src/
+│   ├── app/                     # Shared router; integration lead only
+│   ├── components/              # Shared UI components
+│   ├── features/                # Feature-based modules
+│   ├── services/                # Shared HTTP client
+│   └── styles/                  # Shared design tokens
+├── docs/                        # Rules, API contract, task assignment
+├── scripts/                     # Windows verification scripts
+└── .github/                     # Pull request template and CI
+```
 
-## 1. MySQL
+## 3. Yêu cầu máy
 
-Cách nhanh nhất để test auth:
+- JDK 17
+- Maven 3.9+
+- Node.js 20+
+- MySQL 8 và MySQL Workbench
+- VS Code hoặc IntelliJ IDEA
+- Git
 
-1. Mở MySQL Workbench.
-2. Chạy `docs/database/auth_schema.sql`.
+Kiểm tra:
 
-Nếu muốn dùng toàn bộ database TOEIC đã thiết kế, chạy:
-`docs/database/toeic_learning_mysql.sql`.
+```powershell
+java -version
+javac -version
+mvn -version
+node -v
+npm -v
+git --version
+```
 
-Database mặc định: `toeic_learning`.
+## 4. Chạy dự án lần đầu trên Windows
 
-## 2. Backend
+### Bước 1: Tạo file môi trường
 
-PowerShell:
+Tại thư mục gốc:
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+Thay `DB_PASSWORD` bằng mật khẩu MySQL trên máy. Không commit file `.env`.
+
+### Bước 2: Tạo database
+
+Chạy bằng MySQL Workbench:
+
+```sql
+CREATE DATABASE IF NOT EXISTS toeic_learning
+CHARACTER SET utf8mb4
+COLLATE utf8mb4_unicode_ci;
+```
+
+Không cần chạy file schema thủ công. Flyway tự chạy `V1`, `V2` khi backend khởi động.
+
+### Bước 3: Chạy backend
 
 ```powershell
 cd backend
-$env:DB_USERNAME="root"
-$env:DB_PASSWORD="MAT_KHAU_MYSQL_CUA_BAN"
-$env:JWT_SECRET="mot-secret-key-rat-dai-it-nhat-32-ky-tu"
-mvn spring-boot:run
+mvn clean spring-boot:run
 ```
 
-Backend: `http://localhost:8080`
-Health check: `http://localhost:8080/api/health`
+Kiểm tra:
 
-Nếu MySQL root không có password, có thể bỏ biến `DB_PASSWORD`.
-Không dùng secret mặc định khi deploy production.
+```text
+http://localhost:8080/api/v1/health
+http://localhost:8080/api/v1/public/courses
+```
 
-## 3. Frontend
+### Bước 4: Chạy frontend
 
-Mở terminal khác:
+Mở terminal mới:
 
 ```powershell
 cd frontend
 Copy-Item .env.example .env
-npm install
+npm ci
 npm run dev
 ```
 
-Frontend: `http://localhost:5173`
+Mở `http://localhost:5173`.
 
-## API auth hiện có
+## 5. Phân công 5 thành viên
 
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `POST /api/auth/forgot-password`
-- `POST /api/auth/reset-password`
-- `GET /api/auth/me` — cần Bearer JWT
+| Developer | Module | Branch đề nghị |
+|---|---|---|
+| DEV 1 | Authentication, User, Profile | `feature/dev1-auth-user` |
+| DEV 2 | Admin, Tuition Package, Reports | `feature/dev2-admin-package` |
+| DEV 3 | Course, Curriculum, Learning Content | `feature/dev3-course-content` |
+| DEV 4 | Class, Enrollment, Schedule | `feature/dev4-classroom` |
+| DEV 5 | Assessment, Practice, Progress | `feature/dev5-assessment-progress` |
 
-### Register body
+Chi tiết file ownership và API nằm trong [docs/TASK_ASSIGNMENT_AND_API_CONTRACT.md](docs/TASK_ASSIGNMENT_AND_API_CONTRACT.md).
+
+## 6. Quy trình Git ngắn gọn
+
+Không code trực tiếp trên `main` hoặc `develop`.
+
+```powershell
+git switch develop
+git pull origin develop
+git switch -c feature/dev3-course-content
+```
+
+Trong quá trình làm:
+
+```powershell
+git status
+git add backend/src/main/java/com/toeicpath/catalog
+git add frontend/src/features/course-content
+git commit -m "feat(course): add course creation"
+git push -u origin feature/dev3-course-content
+```
+
+Trước khi tạo Pull Request:
+
+```powershell
+git fetch origin
+git merge origin/develop
+cd backend
+mvn test
+cd ../frontend
+npm run build
+```
+
+Pull Request đi theo hướng:
+
+```text
+feature/... -> develop -> main
+```
+
+## 7. Quy tắc bắt buộc
+
+1. Mỗi người chỉ sửa module được phân công.
+2. Không tự ý sửa `pom.xml`, `package.json`, `application.yml`, `SecurityConfig.java`, `router.jsx` hoặc migration của người khác.
+3. Không đổi endpoint hoặc JSON field đã chốt nếu chưa có xác nhận của nhóm.
+4. Không commit `.env`, `node_modules`, `target`, file upload hoặc mật khẩu.
+5. Không gọi API trực tiếp trong React page/component; API phải nằm trong `services/` của feature.
+6. Controller Spring chỉ nhận/trả request; nghiệp vụ nằm trong service.
+7. Không sửa migration Flyway đã merge. Luôn tạo migration mới.
+8. Mọi PR phải build thành công và được ít nhất một thành viên review.
+
+## 8. Tài liệu quan trọng
+
+- [Project Rules](docs/PROJECT_RULES.md)
+- [Task Assignment and API Contract](docs/TASK_ASSIGNMENT_AND_API_CONTRACT.md)
+- [Git Workflow](docs/GIT_WORKFLOW.md)
+- [Database Conventions](docs/DATABASE_CONVENTIONS.md)
+- [Design System](docs/DESIGN_SYSTEM.md)
+
+## 9. Endpoint mẫu có sẵn
+
+```http
+GET /api/v1/health
+GET /api/v1/public/courses
+```
+
+Response chuẩn:
 
 ```json
 {
-  "fullName": "Nguyen Van A",
-  "email": "student@example.com",
-  "phone": "0900000000",
-  "password": "123456"
+  "success": true,
+  "message": "Success",
+  "data": []
 }
 ```
-
-### Login body
-
-```json
-{
-  "email": "student@example.com",
-  "password": "123456"
-}
-```
-
-## Quên mật khẩu
-
-Trong bản demo/local, `/forgot-password` trả `resetToken` trực tiếp để test nhanh.
-Khi deploy thật, KHÔNG trả token cho client; thay bằng gửi link/token qua email.
-
-## Vai trò
-
-- STUDENT: học viên. Form đăng ký public chỉ tạo STUDENT.
-- TEACHER: giảng viên — sau này tạo khóa học/lớp/lộ trình/nội dung.
-- ADMIN: chỉ quản lý hệ thống, không tạo nội dung học tập.
-
-## Cấu trúc chính
-
-- `frontend/src/pages/auth`: Login/Register/Forgot Password
-- `frontend/src/pages/user/HomePage.jsx`: Homepage
-- `frontend/src/contexts/AuthContext.jsx`: trạng thái đăng nhập
-- `frontend/src/services`: gọi API
-- `backend/src/main/java/com/elearning/auth`: nghiệp vụ auth
-- `backend/src/main/java/com/elearning/security`: JWT/Spring Security
-- `backend/src/main/java/com/elearning/user`: entity/repository User
-- `docs/database`: SQL
-  mvn spring-boot:run
-  npm run dev
