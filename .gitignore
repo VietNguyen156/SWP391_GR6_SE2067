@@ -1,26 +1,12 @@
-# Environment and secrets
+# Local configuration
 .env
-*.local
+.env.*
+!.env.example
 
-# Java / Maven
-backend/target/
-*.class
+# Generated files
+**/node_modules/
+**/dist/
+**/target/
+**/schema-backups/
 *.log
-
-# Node / Vite
-frontend/node_modules/
-frontend/dist/
-frontend/.vite/
-
-# IDE and operating system
-.idea/
-.vscode/*.local.json
-*.iml
 .DS_Store
-Thumbs.db
-
-# Local uploads and temporary files
-uploads/
-tmp/
-coverage/
-

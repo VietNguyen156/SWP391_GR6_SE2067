@@ -1,0 +1,185 @@
+/* Hallmark · genre: editorial · theme: custom "Phiếu trả lời" · design-system: design.md · designed-as-app
+ * 3 màu (60–30–10): nền #F5F0E6 · màu chính #0F3B40 · hổ phách #D9962B · display Fraunces + body Public Sans + mono JetBrains Mono
+ * axes: light / high-contrast-serif / one dark brand + one warm accent
+ */
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=JetBrains+Mono:wght@400..600&family=Public+Sans:wght@400..700&display=swap");
+
+:root {
+  /* ===== Bảng màu DUY NHẤT (60–30–10): nền 60 · màu chính 30 · hổ phách 10 =====
+     Chỉ các dòng trong khối này được viết mã màu. Mọi nơi khác dùng var(--…). */
+  --bg: #f5f0e6;
+  --surface: #ffffff;
+  --primary: #0f3b40;
+  --primary-600: #1a5258;
+  --primary-tint: color-mix(in srgb, var(--primary) 8%, white);
+  --primary-tint2: color-mix(in srgb, var(--primary) 16%, white);
+  --accent: #d9962b;
+  --accent-tint: color-mix(in srgb, var(--accent) 14%, white);
+  --ink: #1c2b2d;
+  --muted: #6b6a63;
+  --line: #e4ddd0;
+  --danger: #b4432f;
+  /* Nhãn trạng thái: chữ "cần chú ý" (AA trên --accent-tint), nền "trung tính", nền lỗi */
+  --accent-ink: #8a5a12;
+  --neutral: #eee9df;
+  --danger-tint: color-mix(in srgb, var(--danger) 8%, white);
+
+  /* ===== Tên cũ → bảng màu (không có giá trị riêng) ===== */
+  --color-paper: var(--bg);
+  --color-paper-2: var(--bg);
+  --color-paper-3: var(--neutral);
+  --color-surface: var(--surface);
+  --color-rule: var(--line);
+  --color-rule-strong: var(--line);
+  --color-muted: var(--muted);
+  --color-ink-2: var(--ink);
+  --color-ink: var(--ink);
+  --color-brand: var(--primary);
+  --color-brand-strong: var(--primary);
+  --color-brand-deep: var(--primary);
+  --color-brand-deep-2: var(--primary-600);
+  --color-brand-tint: var(--primary-tint);
+  --color-brand-soft: var(--primary-tint);
+  --color-brand-line: var(--line);
+  --color-on-brand: var(--bg);
+  --color-on-deep: var(--bg);
+  --color-on-deep-muted: var(--primary-tint2);
+  --color-accent: var(--primary);
+  --color-accent-strong: var(--primary-600);
+  --color-accent-muted: var(--line);
+  --color-accent-soft: var(--primary-tint);
+  --color-accent-ink: var(--bg);
+  --color-accent-2: var(--accent);
+  --color-accent-2-strong: var(--accent-ink);
+  --color-accent-2-soft: var(--accent-tint);
+  --color-focus: var(--primary);
+  --color-success: var(--primary);
+  --color-success-soft: var(--primary-tint);
+  --color-warning: var(--accent-ink);
+  --color-warning-soft: var(--accent-tint);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-tint);
+  --color-locked: var(--ink);
+  --color-locked-soft: var(--neutral);
+
+  /* Chữ */
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.125rem;
+  --text-lg: 1.375rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.25rem;
+  --text-display: clamp(2.25rem, 4vw + 1rem, 3.5rem);
+
+  /* Khoảng cách 4pt */
+  --space-3xs: 0.25rem;
+  --space-2xs: 0.5rem;
+  --space-xs: 0.75rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+  --space-xl: 3rem;
+  --space-2xl: 4.5rem;
+  --space-3xl: 7rem;
+
+  /* Bo góc & lớp */
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+  --shadow-1: 0 1px 0 color-mix(in oklch, var(--color-ink) 6%, transparent);
+  --shadow-2:
+    0 1px 2px color-mix(in oklch, var(--color-ink) 8%, transparent),
+    0 4px 14px color-mix(in oklch, var(--color-ink) 6%, transparent);
+  --shadow-3:
+    0 2px 6px color-mix(in oklch, var(--color-ink) 10%, transparent),
+    0 16px 40px color-mix(in oklch, var(--color-ink) 14%, transparent);
+  --scrim: color-mix(in oklch, var(--color-ink) 42%, transparent);
+
+  /* Chuyển động */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-short: 160ms;
+  --dur-med: 240ms;
+
+  /* Thang z-index có tên */
+  --z-sticky: 20;
+  --z-nav: 30;
+  --z-drawer: 40;
+  --z-modal: 50;
+  --z-toast: 60;
+
+  /* Tên cũ trong global.css → token mới (một nguồn duy nhất) */
+  --tp-ink: var(--color-ink);
+  --tp-muted: var(--color-muted);
+  --tp-soft: var(--color-paper-2);
+  --tp-line: var(--color-rule);
+  --tp-primary: var(--color-accent);
+  --tp-primary-dark: var(--color-accent-strong);
+  --tp-accent: var(--color-accent);
+  --tp-success: var(--color-success);
+  --tp-warning: var(--color-warning);
+  --tp-danger: var(--color-danger);
+  --tp-surface: var(--color-surface);
+  --tp-radius: var(--radius-md);
+  --tp-radius-lg: var(--radius-lg);
+  --tp-shadow: var(--shadow-1);
+  --tp-shadow-hover: var(--shadow-2);
+  --cs-hero-gradient: var(--color-paper-2);
+  --cs-accent-gradient: var(--color-accent);
+  --cs-primary-soft: var(--color-accent-soft);
+  --cs-accent-soft: var(--color-accent-2-soft);
+  --cs-focus: var(--color-focus);
+  --sc-nav-h: 64px;
+  --sc-hero-text: var(--color-ink-2);
+  --sc-hero-line: var(--color-rule);
+  --sc-hero-fill: var(--color-surface);
+
+  /* Bootstrap 5.3 đọc các biến này */
+  --bs-body-font-family: var(--font-body);
+  --bs-body-font-size: 1rem;
+  --bs-body-line-height: 1.6;
+  --bs-body-color: var(--color-ink);
+  --bs-body-bg: var(--color-paper);
+  --bs-emphasis-color: var(--color-ink);
+  --bs-secondary-color: var(--color-muted);
+  --bs-tertiary-bg: var(--color-paper-2);
+  --bs-border-color: var(--color-rule);
+  --bs-border-radius: var(--radius-sm);
+  --bs-border-radius-sm: var(--radius-xs);
+  --bs-border-radius-lg: var(--radius-md);
+  --bs-border-radius-xl: var(--radius-lg);
+  --bs-border-radius-pill: var(--radius-pill);
+  --bs-link-color: var(--color-accent);
+  --bs-link-color-rgb: 15, 59, 64;
+  --bs-link-hover-color: var(--color-accent-strong);
+  --bs-link-hover-color-rgb: 26, 82, 88;
+  --bs-primary: var(--color-accent);
+  --bs-primary-rgb: 15, 59, 64;
+  --bs-heading-color: var(--color-ink);
+  --bs-focus-ring-color: color-mix(in oklch, var(--color-focus) 40%, transparent);
+  --bs-box-shadow: var(--shadow-2);
+  --bs-box-shadow-sm: var(--shadow-1);
+  --bs-box-shadow-lg: var(--shadow-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-short: 1ms;
+    --dur-med: 1ms;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}

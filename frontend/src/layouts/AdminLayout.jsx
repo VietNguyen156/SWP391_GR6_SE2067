@@ -1,4 +1,41 @@
-import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet, useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import AdminSidebar from "../components/admin/AdminSidebar";
+import Brand from "../components/common/Brand";
+import Icon from "../components/common/Icon";
+
 export default function AdminLayout() {
-  return <><nav className="navbar navbar-dark bg-dark px-4"><Link className="navbar-brand" to="/">TOEIC Path</Link><span className="text-white">Admin · Quản lý hệ thống</span></nav><main className="container py-4"><Outlet /></main></>;
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  async function logout() {
+    await signOut();
+    navigate("/login", { replace: true, state: { message: "Bạn đã đăng xuất thành công." } });
+  }
+  return (
+    <>
+      <nav className="admin-topbar">
+        <Brand to="/admin" light />
+        <div className="admin-account">
+          <Link to="/admin/profile">
+            <span className="user-avatar">{user?.fullName?.charAt(0)?.toUpperCase() || "A"}</span>
+            <span>
+              <small>Administrator</small>
+              <strong>{user?.fullName}</strong>
+            </span>
+          </Link>
+          <button className="icon-button" onClick={logout} title="Đăng xuất">
+            <Icon name="logout" />
+          </button>
+        </div>
+      </nav>
+      <div className="admin-shell">
+        <AdminSidebar />
+        <main className="admin-main">
+          <div className="page-enter">
+            <Outlet />
+          </div>
+        </main>
+      </div>
+    </>
+  );
 }
