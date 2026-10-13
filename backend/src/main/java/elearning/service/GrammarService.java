@@ -74,7 +74,7 @@ public class GrammarService {
         topic.setCreatedByTeacher(teacher);
         applyTopic(topic, request);
         topic.setCourseWeek(weekOwnedByTeacher(request.courseWeekId(), teacher.getId()));
-        topic.setLesson(lessonOwnedByTeacher(request.lessonId(), request.courseWeekId(), teacher.getId()));
+        topic.setLesson(LessonRepository.addable(lessons, null, lessonOwnedByTeacher(request.lessonId(), request.courseWeekId(), teacher.getId())));
         topics.save(topic);
         return response(topic, null);
     }
@@ -84,7 +84,7 @@ public class GrammarService {
         GrammarTopic topic = ownedTopic(id, teacher.getId());
         applyTopic(topic, request);
         topic.setCourseWeek(weekOwnedByTeacher(request.courseWeekId(), teacher.getId()));
-        topic.setLesson(lessonOwnedByTeacher(request.lessonId(), request.courseWeekId(), teacher.getId()));
+        topic.setLesson(LessonRepository.addable(lessons, topic.getLesson(), lessonOwnedByTeacher(request.lessonId(), request.courseWeekId(), teacher.getId())));
         topics.save(topic);
         return response(topic, null);
     }
