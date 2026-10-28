@@ -39,7 +39,7 @@ export function PurchaseCard({ purchase, busy, onBuy }) {
     <aside className="sc-buy-card" aria-labelledby="sc-buy-title">
       <span className="sc-buy-kicker">Học phí trọn khóa</span>
       <p className="sc-buy-price" id="sc-buy-title">
-        {formatMoney(purchase.price)}
+        {formatMoney(purchase.price, { freeLabel: "Miễn phí" })}
       </p>
       <ul className="sc-buy-benefits">
         {benefits.map((item) => (

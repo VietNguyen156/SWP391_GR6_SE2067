@@ -42,9 +42,36 @@ export default function OrderPage() {
     };
   }, [code]);
 
-  // TODO: them polling reload trang thai don hang
+  // Đơn còn mở: hỏi lại trạng thái mỗi 15 giây (admin xác nhận / từ chối / hết hạn).
+  useEffect(() => {
+    if (!open) return undefined;
+    const timer = setInterval(() => {
+      orderApi
+        .get(code)
+        .then(setOrder)
+        .catch(() => {});
+    }, POLL_MS);
+    return () => clearInterval(timer);
+  }, [code, open]);
+
   async function cancel() {
-    toast.info("Chức năng hủy đơn đang được hoàn thiện");
+    const ok = await confirm({
+      title: "Hủy đơn hàng?",
+      message: "Chỉ hủy khi bạn chưa chuyển khoản. Bạn có thể tạo đơn mới sau.",
+      confirmLabel: "Hủy đơn",
+      cancelLabel: "Giữ đơn",
+      danger: true,
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      setOrder(await orderApi.cancel(order.id));
+      toast.success("Đã hủy đơn hàng.");
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Không thể hủy đơn");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function createNew() {
