@@ -10,4 +10,9 @@ import java.util.*;
 public interface DailyLearningStatisticRepository
         extends JpaRepository<DailyLearningStatistic, Long> {
     Optional<DailyLearningStatistic> findByStudentIdAndLearningDate(Long studentId, LocalDate date);
+
+    List<DailyLearningStatistic> findAllByStudentIdAndLearningDateBetweenOrderByLearningDateAsc(
+            Long studentId, LocalDate from, LocalDate to);
+
+    List<DailyLearningStatistic> findAllByStudentIdOrderByLearningDateDesc(Long studentId);
 }

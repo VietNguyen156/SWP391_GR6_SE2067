@@ -44,6 +44,7 @@ public final class ProgressDto {
             Integer grammarCompleted,
             Integer flashcardsReviewed,
             BigDecimal testAverageScore,
+            Integer learningStreak,
             List<LessonProgressSummary> courses) {}
 
     public record TeacherCourseStatisticResponse(
