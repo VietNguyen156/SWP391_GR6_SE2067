@@ -1,0 +1,200 @@
+/* TOEIC Path Design Tokens
+ * Chữ giao diện: Be Vietnam Pro (Inter dự phòng); phiên âm IPA: Noto Sans.
+ */
+@import url("https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500&family=Inter:ital,wght@0,400..700;1,400..700&family=Noto+Sans:wght@400..600&display=swap");
+
+:root {
+  /* ===== Bảng màu DUY NHẤT (60–30–10): nền 60 · màu chính 30 · hổ phách 10 =====
+     Chỉ các dòng trong khối này được viết mã màu. Mọi nơi khác dùng var(--…). */
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --primary: #315aa4;
+  --primary-600: #244782;
+  --primary-tint: color-mix(in srgb, var(--primary) 8%, white);
+  --primary-tint2: color-mix(in srgb, var(--primary) 16%, white);
+  --accent: #f5a623;
+  --accent-tint: color-mix(in srgb, var(--accent) 14%, white);
+  --ink: #243f70;
+  --muted: #63748f;
+  --line: #dce4ef;
+  --danger: #ef4444;
+  /* Nhãn trạng thái: chữ "cần chú ý" (AA trên --accent-tint), nền "trung tính", nền lỗi */
+  --accent-ink: #b45309;
+  --neutral: #edf2f8;
+  --danger-tint: color-mix(in srgb, var(--danger) 8%, white);
+  /* Đáp án đúng (đối lập với --danger): chỉ dùng cho kết quả làm bài */
+  --success: #10b981;
+  --success-tint: color-mix(in srgb, var(--success) 12%, white);
+
+  /* ===== Tên cũ → bảng màu (không có giá trị riêng) ===== */
+  --color-paper: var(--bg);
+  --color-paper-2: var(--neutral);
+  --color-paper-3: var(--neutral);
+  --color-surface: var(--surface);
+  --color-rule: var(--line);
+  --color-rule-strong: var(--line);
+  --color-muted: var(--muted);
+  --color-ink-2: var(--ink);
+  --color-ink: var(--ink);
+  --color-brand: var(--primary);
+  --color-brand-strong: var(--primary);
+  --color-brand-deep: var(--primary);
+  --color-brand-deep-2: var(--primary-600);
+  --color-brand-tint: var(--primary-tint);
+  --color-brand-soft: var(--primary-tint);
+  --color-brand-line: var(--line);
+  --color-on-brand: var(--bg);
+  --color-on-deep: var(--bg);
+  --color-on-deep-muted: var(--primary-tint2);
+  --color-accent: var(--primary);
+  --color-accent-strong: var(--primary-600);
+  --color-accent-muted: var(--line);
+  --color-accent-soft: var(--primary-tint);
+  --color-accent-ink: var(--bg);
+  --color-accent-2: var(--accent);
+  --color-accent-2-strong: var(--accent-ink);
+  --color-accent-2-soft: var(--accent-tint);
+  --color-focus: var(--primary);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-tint);
+  --color-warning: var(--accent-ink);
+  --color-warning-soft: var(--accent-tint);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-tint);
+  --color-locked: var(--ink);
+  --color-locked-soft: var(--neutral);
+
+  /* Chữ */
+  --font-display: "Be Vietnam Pro", "Inter", "Noto Sans", system-ui, -apple-system, sans-serif;
+  --font-body: "Be Vietnam Pro", "Inter", "Noto Sans", system-ui, -apple-system, sans-serif;
+  --font-ipa: "Noto Sans", "Inter", system-ui, sans-serif;
+  /* Phông tiêu đề trang chủ: thiết kế riêng cho tiếng Việt, dấu thanh rõ và cân đối. */
+  --font-home: var(--font-display);
+  --font-mono: ui-monospace, "Cascadia Mono", monospace;
+  --text-xs: 0.8125rem;
+  --text-sm: 0.9rem;
+  --text-base: 1rem;
+  --text-md: 1.125rem;
+  --text-lg: 1.375rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.25rem;
+  --text-display: clamp(2.25rem, 4vw + 1rem, 3.5rem);
+
+  /* Khoảng cách 4pt */
+  --space-3xs: 0.25rem;
+  --space-2xs: 0.5rem;
+  --space-xs: 0.75rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+  --space-xl: 3rem;
+  --space-2xl: 4.5rem;
+  --space-3xl: 7rem;
+
+  /* Bo góc & lớp */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
+  --shadow-xs: 0 1px 2px color-mix(in srgb, var(--ink) 4%, transparent);
+  --shadow-1:
+    0 1px 2px color-mix(in srgb, var(--ink) 5%, transparent),
+    0 2px 4px color-mix(in srgb, var(--ink) 4%, transparent);
+  --shadow-2:
+    0 2px 4px color-mix(in srgb, var(--ink) 5%, transparent),
+    0 6px 16px color-mix(in srgb, var(--ink) 7%, transparent);
+  --shadow-3:
+    0 4px 8px color-mix(in srgb, var(--ink) 6%, transparent),
+    0 16px 36px color-mix(in srgb, var(--ink) 10%, transparent);
+  --shadow-sm: var(--shadow-1);
+  --shadow-md: var(--shadow-2);
+  --shadow-lg: var(--shadow-3);
+  --shadow-hover: 0 8px 24px color-mix(in srgb, var(--ink) 8%, transparent);
+  --scrim: color-mix(in oklch, var(--color-ink) 42%, transparent);
+
+  /* Chuyển động */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-short: 160ms;
+  --dur-med: 240ms;
+
+  /* Thang z-index có tên */
+  --z-sticky: 20;
+  --z-nav: 30;
+  --z-drawer: 40;
+  --z-modal: 50;
+  --z-toast: 60;
+
+  /* Tên cũ trong global.css → token mới (một nguồn duy nhất) */
+  --tp-ink: var(--color-ink);
+  --tp-muted: var(--color-muted);
+  --tp-soft: var(--color-paper-2);
+  --tp-line: var(--color-rule);
+  --tp-primary: var(--color-accent);
+  --tp-primary-dark: var(--color-accent-strong);
+  --tp-accent: var(--color-accent);
+  --tp-success: var(--color-success);
+  --tp-warning: var(--color-warning);
+  --tp-danger: var(--color-danger);
+  --tp-surface: var(--color-surface);
+  --tp-radius: var(--radius-md);
+  --tp-radius-lg: var(--radius-lg);
+  --tp-shadow: var(--shadow-1);
+  --tp-shadow-hover: var(--shadow-2);
+  --cs-hero-gradient: var(--color-paper-2);
+  --cs-accent-gradient: var(--color-accent);
+  --cs-primary-soft: var(--color-accent-soft);
+  --cs-accent-soft: var(--color-accent-2-soft);
+  --cs-focus: var(--color-focus);
+  --sc-nav-h: 64px;
+  /* Thanh “Về bài học / breadcrumb” của trang học liệu (.ms-top): 48px + viền 1px */
+  --ms-top-h: 49px;
+  --sc-hero-text: var(--color-ink-2);
+  --sc-hero-line: var(--color-rule);
+  --sc-hero-fill: var(--color-surface);
+
+  /* Bootstrap 5.3 đọc các biến này */
+  --bs-body-font-family: var(--font-body);
+  --bs-body-font-size: 1rem;
+  --bs-body-line-height: 1.65;
+  --bs-body-color: var(--color-ink);
+  --bs-body-bg: var(--color-paper);
+  --bs-emphasis-color: var(--color-ink);
+  --bs-secondary-color: var(--color-muted);
+  --bs-tertiary-bg: var(--color-paper-2);
+  --bs-border-color: var(--color-rule);
+  --bs-border-radius: var(--radius-sm);
+  --bs-border-radius-sm: var(--radius-xs);
+  --bs-border-radius-lg: var(--radius-md);
+  --bs-border-radius-xl: var(--radius-lg);
+  --bs-border-radius-pill: var(--radius-pill);
+  --bs-link-color: var(--color-accent);
+  --bs-link-color-rgb: 49, 90, 164;
+  --bs-link-hover-color: var(--color-accent-strong);
+  --bs-link-hover-color-rgb: 36, 71, 130;
+  --bs-primary: var(--color-accent);
+  --bs-primary-rgb: 49, 90, 164;
+  --bs-heading-color: var(--color-ink);
+  --bs-focus-ring-color: color-mix(in oklch, var(--color-focus) 40%, transparent);
+  --bs-box-shadow: var(--shadow-2);
+  --bs-box-shadow-sm: var(--shadow-1);
+  --bs-box-shadow-lg: var(--shadow-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-short: 1ms;
+    --dur-med: 1ms;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
