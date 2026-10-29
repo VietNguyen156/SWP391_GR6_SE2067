@@ -20,7 +20,22 @@
 
 Compose khởi động MySQL trước backend và frontend. Database và tệp tải lên được giữ trong Docker volumes `mysql_data` và `uploads_data`.
 
-Đặt SMTP (`MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`) nếu muốn gửi email đặt lại mật khẩu. Có thể cấu hình tài khoản nhận tiền trong trang Cài đặt thanh toán cd fsau khi nạp dữ liệu phù hợp.
+Đặt SMTP (`MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`) nếu muốn gửi email đặt lại mật khẩu. Có thể cấu hình tài khoản nhận tiền trong trang Cài đặt thanh toán sau khi nạp dữ liệu phù hợp.
+
+## Nhập câu hỏi và flashcard từ file
+
+Giảng viên có thể nhập file `.txt` hoặc Word `.docx` trong màn hình chỉnh sửa Reading, Listening,
+TestBank, Flashcard và Ngân hàng câu hỏi; người học cũng có thể nhập thẻ vào bộ flashcard cá nhân.
+Giao diện đọc file trong trình duyệt, hiển thị xem trước và lỗi theo dòng trước khi xác nhận.
+Reading, Listening, TestBank và flashcard chỉ cập nhật form; hãy bấm **Lưu** để ghi thay đổi.
+Ngân hàng câu hỏi lưu từng câu sau khi xác nhận nhập.
+
+- Câu trắc nghiệm: bắt đầu bằng `1. Câu hỏi`, mỗi lựa chọn trên một dòng `A. ...` đến `D. ...`,
+  đáp án đúng bằng `Đáp án: B` hoặc dấu `*` sau lựa chọn. `Giải thích:` và `Căn cứ:` là tùy chọn.
+- Ngân hàng câu hỏi yêu cầu đủ bốn lựa chọn; các bài Reading/Listening cho phép từ hai đến bốn.
+- Flashcard: mỗi dòng có dạng `mặt trước | mặt sau | phát âm | loại từ | ví dụ`; ba cột cuối có thể để trống. Có thể dán dữ liệu từ Excel dùng tab.
+- File Word cần lưu dạng `.docx` và giữ mỗi câu/lựa chọn trên một đoạn riêng; `.doc` cũ chưa được hỗ trợ.
+- Tải file mẫu ngay trong từng màn hình nhập. File tối đa 1 MB; dòng bắt đầu bằng `#` được xem là ghi chú.
 
 ## Chạy thủ công
 
