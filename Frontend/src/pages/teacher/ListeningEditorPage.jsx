@@ -15,6 +15,7 @@ import useUnsavedGuard from "../../utils/useUnsavedGuard";
 import LessonPlacement from "../../components/course/LessonPlacement";
 import AddButton from "../../components/material-view/AddButton";
 import McqEditor, { blankQuestion } from "../../components/material-view/McqEditor";
+import McqFileImport from "../../components/material-view/McqFileImport";
 import EditGate from "../../components/common/EditGate";
 import useEditForm from "../../utils/useEditForm";
 const question = blankQuestion;
@@ -176,6 +177,11 @@ export default function ListeningEditorPage({ mode: routeMode }) {
         {body && (
           <>
             <hr className="my-4" />
+            <McqFileImport
+              questions={form.questions}
+              onChange={(questions) => setForm((f) => ({ ...f, questions }))}
+              kind="listening"
+            />
             <McqEditor
               questions={form.questions}
               onChange={(questions) => setForm((f) => ({ ...f, questions }))}
