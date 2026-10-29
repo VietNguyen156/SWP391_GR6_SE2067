@@ -12,11 +12,10 @@ setup:
 	docker compose up -d mysql
 
 teardown:
-	# Clean up everything, including the MySQL data volume and orphan containers
-	docker compose down -v --remove-orphans
+	# Stop containers but preserve MySQL data and uploaded files
+	docker compose down --remove-orphans
 
-	# Use this if you want to keep the MySQL data volume and orphan containers
-	# docker compose down --remove-orphans
+	# To permanently delete all Docker data volumes, run: docker compose down -v --remove-orphans
 
 run-backend:
 	cd backend && mvn spring-boot:run -Dspring-boot.run.arguments="--spring.datasource.url=jdbc:mysql://localhost:3307/toeic_learning?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh"
@@ -25,4 +24,4 @@ run-frontend:
 	cd frontend && npm run dev
 
 run-all:
-	docker compose up --build
+	docker compose up --build -d

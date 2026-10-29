@@ -6,9 +6,12 @@ import { useConfirm } from "../../components/common/ConfirmDialog";
 import { Link, useSearchParams } from "react-router-dom";
 import Tabs from "../../components/common/Tabs";
 import IconButton from "../../components/common/IconButton";
+import FileImport, { McqPreview } from "../../components/material-view/FileImport";
 import { questionApi } from "../../services/assessmentService";
 import { testBankApi } from "../../services/testBankService";
 import TestBankList from "../../components/teacher/TestBankList";
+import questionBankTemplate from "../../assets/import-templates/question-bank-template.txt?raw";
+import { parseMcqText } from "../../utils/questionImport";
 /** embedded: nằm trong tab "Câu hỏi" của Ngân hàng đề thi (không tự vẽ tiêu đề trang). */
 export default function QuestionManagementPage({ embedded = false }) {
   const confirm = useConfirm();
@@ -30,13 +33,17 @@ export default function QuestionManagementPage({ embedded = false }) {
     [setTitle, setSetTitle] = useState(""),
     [setsKey, setSetsKey] = useState(0),
     [saving, setSaving] = useState(false),
+    [importing, setImporting] = useState(false),
+    [importDifficulty, setImportDifficulty] = useState("MEDIUM"),
     [notice, setNotice] = useState("");
   async function load() {
     try {
       setQuestions(await questionApi.list());
       setState({ loading: false, error: "" });
+      return true;
     } catch (e) {
       setState({ loading: false, error: e.response?.data?.message || "Không thể tải câu hỏi" });
+      return false;
     }
   }
   useEffect(() => {
@@ -66,6 +73,44 @@ export default function QuestionManagementPage({ embedded = false }) {
       await load();
     } catch (e) {
       setState((s) => ({ ...s, error: e.response?.data?.message || "Câu hỏi đang được sử dụng" }));
+    }
+  }
+  async function importQuestions(items) {
+    setImporting(true);
+    setState((current) => ({ ...current, error: "" }));
+    setNotice("");
+    let imported = 0;
+    let failure = "";
+    try {
+      for (const item of items) {
+        try {
+          await questionApi.create({
+            questionText: item.questionText,
+            explanation: item.explanation,
+            difficulty: importDifficulty,
+            lessonId: null,
+            options: item.options.map(({ optionText, correct }) => ({
+              content: optionText,
+              correct,
+            })),
+          });
+          imported += 1;
+        } catch (error) {
+          failure = error.response?.data?.message || error.message || "Lỗi không xác định";
+          break;
+        }
+      }
+      const refreshed = await load();
+      if (failure) {
+        setState({
+          loading: false,
+          error: `Đã lưu ${imported}/${items.length} câu. Dừng nhập để tránh lưu thiếu; lỗi: ${failure}`,
+        });
+      } else if (refreshed) {
+        setNotice(`Đã nhập ${imported} câu hỏi vào ngân hàng.`);
+      }
+    } finally {
+      setImporting(false);
     }
   }
   const togglePicked = (id) =>
@@ -186,6 +231,39 @@ export default function QuestionManagementPage({ embedded = false }) {
             </form>
           )}
           <div className="teacher-panel-body">
+            <FileImport
+              template={questionBankTemplate}
+              templateName="question-bank-template.txt"
+              noun="câu hỏi"
+              confirmLabel={(count) => `Lưu ${count} câu vào ngân hàng`}
+              disabled={importing}
+              parse={(text) => {
+                const { questions: items, errors } = parseMcqText(text, {
+                  minOptions: 4,
+                  maxOptions: 4,
+                });
+                return { items, errors };
+              }}
+              renderItem={(item) => <McqPreview q={item} />}
+              onImport={importQuestions}
+              extra={
+                <label className="form-label d-block">
+                  Độ khó áp dụng cho các câu được nhập
+                  <select
+                    className="form-select mt-1"
+                    value={importDifficulty}
+                    onChange={(event) => setImportDifficulty(event.target.value)}
+                    disabled={importing}
+                  >
+                    {["BEGINNER", "EASY", "MEDIUM", "HARD", "ADVANCED"].map((value) => (
+                      <option key={value} value={value}>
+                        {enumLabel(value)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              }
+            />
             <div className="teacher-question-grid">
               {filtered.map((x, i) => (
                 <article className="teacher-question-card" key={x.id}>

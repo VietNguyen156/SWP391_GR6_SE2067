@@ -7,7 +7,7 @@ import AttachmentManager, { uploadDrafts } from "../../components/grammar/Attach
 import AddButton from "../../components/material-view/AddButton";
 import { EditHeader, SaveBar, editorTitle } from "../../components/material-view/EditFrame";
 import McqEditor, { blankQuestion } from "../../components/material-view/McqEditor";
-import ReadingQuestionImporter from "../../components/material-view/ReadingQuestionImporter";
+import McqFileImport from "../../components/material-view/McqFileImport";
 import Passage from "../../components/reading/Passage";
 import { getTeacherCurriculum } from "../../services/courseService";
 import { readingApi } from "../../services/learningContentService";
@@ -195,17 +195,6 @@ export default function ReadingEditorPage({ mode: routeMode }) {
     setWeeks(v ? await getTeacherCurriculum(v) : []);
   }
 
-  function appendImportedQuestions(imported) {
-    const current = form.questions || [];
-    const hasOnlyEmptyStarter =
-      current.length === 1 &&
-      !current[0].questionText.trim() &&
-      !current[0].explanation?.trim() &&
-      !current[0].evidence?.trim() &&
-      current[0].options.every((option) => !option.optionText.trim());
-    set({ questions: [...(hasOnlyEmptyStarter ? [] : current), ...imported] });
-  }
-
   async function save(e) {
     e.preventDefault();
     if (!form.courseWeekId || !form.lessonId) {
@@ -385,7 +374,11 @@ export default function ReadingEditorPage({ mode: routeMode }) {
         {body && (
           <>
             <hr className="my-4" />
-            <ReadingQuestionImporter onImport={appendImportedQuestions} />
+            <McqFileImport
+              questions={form.questions}
+              onChange={(questions) => set({ questions })}
+              kind="reading"
+            />
             <McqEditor
               questions={form.questions}
               onChange={(questions) => set({ questions })}

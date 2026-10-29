@@ -1,0 +1,21 @@
+# MẪU NHẬP CÂU HỎI READING (lưu file dạng .txt, mã hóa UTF-8)
+# - Mỗi câu bắt đầu bằng số thứ tự: "1." hoặc "Câu 1:"
+# - Đáp án viết "A." đến "D." (Part 6/7 thường có 4 đáp án)
+# - Đáp án đúng: thêm dòng "Đáp án: B" hoặc đặt dấu * cuối đáp án đúng
+# - "Giải thích:" và "Căn cứ:" là tùy chọn. Căn cứ là câu nguyên văn trong đoạn văn, sẽ được tô sáng cho học viên.
+# - Dòng bắt đầu bằng # là ghi chú, hệ thống bỏ qua.
+
+1. What is the purpose of the e-mail?
+A. To confirm a meeting time
+B. To request a schedule change
+C. To announce a new policy
+D. To thank a client
+Đáp án: B
+Giải thích: The writer asks to move the meeting to Thursday.
+Căn cứ: Would it be possible to move our meeting to Thursday?
+
+2. Where will the meeting take place?
+A. In the main office
+B. In Room 201 *
+C. At the airport
+D. Online

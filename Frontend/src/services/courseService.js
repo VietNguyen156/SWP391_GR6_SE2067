@@ -30,6 +30,9 @@ export async function deleteLesson(id) {
 export async function getCourses() {
   return (await axiosClient.get("/courses")).data;
 }
+export async function getPublicCourses() {
+  return (await axiosClient.get("/public/courses")).data;
+}
 export async function getCourse(id) {
   return (await axiosClient.get(`/courses/${id}`)).data;
 }
