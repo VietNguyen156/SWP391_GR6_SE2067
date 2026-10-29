@@ -90,6 +90,8 @@ public class SecurityConfig {
                                         .permitAll()
                                         .requestMatchers(HttpMethod.GET, "/api/health")
                                         .permitAll()
+                                        .requestMatchers(HttpMethod.GET, "/api/public/courses")
+                                        .permitAll()
                                         .requestMatchers("/error")
                                         .permitAll()
                                         .requestMatchers(
