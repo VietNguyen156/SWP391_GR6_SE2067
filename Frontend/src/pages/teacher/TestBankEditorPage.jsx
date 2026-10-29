@@ -6,7 +6,6 @@ import AttachmentManager, { uploadDrafts } from "../../components/grammar/Attach
 import AddButton from "../../components/material-view/AddButton";
 import { EditHeader, SaveBar } from "../../components/material-view/EditFrame";
 import McqEditor, { blankQuestion } from "../../components/material-view/McqEditor";
-import McqFileImport from "../../components/material-view/McqFileImport";
 import { testBankApi } from "../../services/testBankService";
 import { FILE_TYPES } from "../../utils/attachments";
 import useEditForm from "../../utils/useEditForm";
@@ -309,11 +308,6 @@ export default function TestBankEditorPage() {
         {type !== "speaking" && (
           <>
             <hr className="my-4" />
-            <McqFileImport
-              questions={form.questions}
-              onChange={(questions) => set({ questions })}
-              kind={type}
-            />
             <McqEditor
               questions={form.questions}
               onChange={(questions) => set({ questions })}

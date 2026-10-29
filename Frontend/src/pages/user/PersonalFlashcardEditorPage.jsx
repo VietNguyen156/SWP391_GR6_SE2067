@@ -6,7 +6,6 @@ import PageHeader from "../../components/common/PageHeader";
 import { enumLabel } from "../../utils/statusLabels";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { flashcardApi } from "../../services/learningContentService";
-import FlashcardFileImport from "../../components/material-view/FlashcardFileImport";
 
 const emptyCard = () => ({
   id: null,
@@ -172,12 +171,6 @@ export default function PersonalFlashcardEditorPage() {
             + Thêm thẻ
           </button>
         </div>
-
-        <FlashcardFileImport
-          cards={form.cards}
-          makeCard={emptyCard}
-          onChange={(cards) => setForm((current) => ({ ...current, cards }))}
-        />
 
         {form.cards.map((card, index) => (
           <details

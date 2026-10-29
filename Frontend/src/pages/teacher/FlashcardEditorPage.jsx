@@ -14,7 +14,6 @@ import {
 import useUnsavedGuard from "../../utils/useUnsavedGuard";
 import LessonPlacement from "../../components/course/LessonPlacement";
 import AddButton from "../../components/material-view/AddButton";
-import FlashcardFileImport from "../../components/material-view/FlashcardFileImport";
 import EditGate from "../../components/common/EditGate";
 import useEditForm from "../../utils/useEditForm";
 const card = () => ({
@@ -187,11 +186,6 @@ export default function FlashcardEditorPage({ mode: routeMode }) {
           <>
             <section className="teacher-panel p-4 teacher-flashcard-list">
               <h2 className="h5 fw-bold mb-3">Các thẻ ({form.cards.length})</h2>
-              <FlashcardFileImport
-                cards={form.cards}
-                makeCard={card}
-                onChange={(cards) => setForm((current) => ({ ...current, cards }))}
-              />
               {form.cards.map((c, i) => (
                 <details
                   className="teacher-collapsible mb-2"
