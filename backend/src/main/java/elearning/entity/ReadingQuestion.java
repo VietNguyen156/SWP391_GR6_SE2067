@@ -8,6 +8,13 @@ import java.util.List;
 @Entity
 @Table(name = "reading_questions")
 public class ReadingQuestion {
+    public enum SkillType {
+        DETAIL,
+        INFERENCE,
+        VOCABULARY,
+        PURPOSE
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -29,6 +36,10 @@ public class ReadingQuestion {
 
     @Column(name = "sort_order", nullable = false)
     private Integer sortOrder = 1;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "skill_type", nullable = false, length = 24)
+    private SkillType skillType = SkillType.DETAIL;
 
     @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("sortOrder ASC")
@@ -76,6 +87,14 @@ public class ReadingQuestion {
 
     public void setSortOrder(Integer v) {
         sortOrder = v;
+    }
+
+    public SkillType getSkillType() {
+        return skillType;
+    }
+
+    public void setSkillType(SkillType v) {
+        skillType = v;
     }
 
     public List<ReadingOption> getOptions() {

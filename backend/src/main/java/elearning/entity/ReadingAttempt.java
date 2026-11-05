@@ -5,10 +5,20 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/** Một lượt nộp bài Reading; mỗi học viên chỉ một lượt cho mỗi bài (khóa duy nhất trong DB). */
+/** Một lượt làm bài Reading: lượt đánh giá chính thức hoặc lượt luyện một kỹ năng. */
 @Entity
-@Table(name = "reading_attempts")
+@Table(
+        name = "reading_attempts",
+        uniqueConstraints =
+                @UniqueConstraint(
+                        name = "uq_reading_assessment_slot",
+                        columnNames = {"reading_id", "student_id", "assessment_slot"}))
 public class ReadingAttempt {
+    public enum Type {
+        ASSESSMENT,
+        TARGETED_PRACTICE
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -22,6 +32,17 @@ public class ReadingAttempt {
     private User student;
 
     private BigDecimal score;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "attempt_type", nullable = false, length = 30)
+    private Type type = Type.ASSESSMENT;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "practice_skill", length = 30)
+    private ReadingQuestion.SkillType practiceSkill;
+
+    @Column(name = "assessment_slot")
+    private Integer assessmentSlot;
 
     @Column(name = "submitted_at", nullable = false)
     private LocalDateTime submittedAt;
@@ -57,6 +78,30 @@ public class ReadingAttempt {
 
     public void setScore(BigDecimal v) {
         score = v;
+    }
+
+    public Type getType() {
+        return type;
+    }
+
+    public void setType(Type v) {
+        type = v;
+    }
+
+    public ReadingQuestion.SkillType getPracticeSkill() {
+        return practiceSkill;
+    }
+
+    public void setPracticeSkill(ReadingQuestion.SkillType v) {
+        practiceSkill = v;
+    }
+
+    public Integer getAssessmentSlot() {
+        return assessmentSlot;
+    }
+
+    public void setAssessmentSlot(Integer v) {
+        assessmentSlot = v;
     }
 
     public LocalDateTime getSubmittedAt() {

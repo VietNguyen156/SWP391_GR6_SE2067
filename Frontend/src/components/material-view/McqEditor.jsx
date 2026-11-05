@@ -7,10 +7,11 @@ export const blankQuestion = () => ({
   questionText: "",
   explanation: "",
   evidence: "",
+  skillType: "DETAIL",
   options: [option("", true), option(), option(), option()],
 });
 
-export default function McqEditor({ questions, onChange, withKey = false }) {
+export default function McqEditor({ questions, onChange, withKey = false, withSkillType = false }) {
   const patch = (qi, fn) => onChange(questions.map((q, n) => (n === qi ? fn(q) : q)));
   const setField = (qi, key, value) => patch(qi, (q) => ({ ...q, [key]: value }));
   const setOption = (qi, oi, key, value) =>
@@ -73,6 +74,22 @@ export default function McqEditor({ questions, onChange, withKey = false }) {
               </div>
             ))}
           </div>
+          {withSkillType && (
+            <label className="form-label small mt-3 mb-1" htmlFor={`skill-${qi}`}>
+              Kỹ năng Reading cần đánh giá
+              <select
+                id={`skill-${qi}`}
+                className="form-select"
+                value={q.skillType || "DETAIL"}
+                onChange={(e) => setField(qi, "skillType", e.target.value)}
+              >
+                <option value="DETAIL">Tìm thông tin chi tiết</option>
+                <option value="INFERENCE">Suy luận từ ngữ cảnh</option>
+                <option value="VOCABULARY">Từ vựng trong ngữ cảnh</option>
+                <option value="PURPOSE">Mục đích / ý chính</option>
+              </select>
+            </label>
+          )}
           {withKey && (
             <div className="row g-2 mt-1">
               <div className="col-md-6">

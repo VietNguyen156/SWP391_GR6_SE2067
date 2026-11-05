@@ -49,6 +49,14 @@ public class SpeakingStudentController {
         return ResponseEntity.ok().contentType(audio.contentType()).body(audio.resource());
     }
 
+    @GetMapping("/submissions/{submissionId}/revisions/{revisionId}/audio")
+    public ResponseEntity<Resource> revisionAudio(
+            Principal principal, @PathVariable Long submissionId, @PathVariable Long revisionId) {
+        SpeakingStudentService.SubmissionAudio audio =
+                service.revisionAudio(principal.getName(), submissionId, revisionId);
+        return ResponseEntity.ok().contentType(audio.contentType()).body(audio.resource());
+    }
+
     @PostMapping(value = "/{id}/submit", consumes = "multipart/form-data")
     public SpeakingSubmissionResponse submit(
             Principal principal, @PathVariable Long id, @RequestParam("audio") MultipartFile audio)

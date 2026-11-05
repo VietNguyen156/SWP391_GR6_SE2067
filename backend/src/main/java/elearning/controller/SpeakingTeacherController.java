@@ -2,9 +2,12 @@ package elearning.controller;
 
 import elearning.dto.SpeakingDto.SpeakingRequest;
 import elearning.dto.SpeakingDto.SpeakingResponse;
+import elearning.dto.SpeakingDto.SpeakingRevisionResponse;
+import elearning.dto.SpeakingDto.SpeakingRubric;
 import elearning.dto.SpeakingDto.SpeakingSubmissionResponse;
 import elearning.entity.Lesson;
 import elearning.entity.SpeakingActivity;
+import elearning.entity.SpeakingRevision;
 import elearning.entity.SpeakingSubmission;
 import elearning.entity.User;
 import elearning.entity.UserRole;
@@ -12,6 +15,7 @@ import elearning.entity.UserStatus;
 import elearning.repository.LessonRepository;
 import elearning.repository.SpeakingActivityRepository;
 import elearning.repository.SpeakingSubmissionRepository;
+import elearning.repository.SpeakingRevisionRepository;
 import elearning.repository.UserRepository;
 import elearning.service.MediaStorageService;
 
@@ -36,6 +40,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.security.Principal;
 import java.util.Comparator;
 import java.util.List;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @RestController
 @RequestMapping("/api/teacher/speaking")
@@ -44,6 +50,7 @@ import java.util.List;
 public class SpeakingTeacherController {
     private final SpeakingActivityRepository acts;
     private final SpeakingSubmissionRepository subs;
+    private final SpeakingRevisionRepository revisions;
     private final UserRepository users;
     private final elearning.repository.CourseWeekRepository weeks;
     private final MediaStorageService media;
@@ -52,12 +59,14 @@ public class SpeakingTeacherController {
     public SpeakingTeacherController(
             SpeakingActivityRepository a,
             SpeakingSubmissionRepository s,
+            SpeakingRevisionRepository revisionRepository,
             UserRepository u,
             elearning.repository.CourseWeekRepository w,
             MediaStorageService m,
             LessonRepository l) {
         acts = a;
         subs = s;
+        revisions = revisionRepository;
         users = u;
         weeks = w;
         media = m;
@@ -142,6 +151,32 @@ public class SpeakingTeacherController {
         return ResponseEntity.ok().contentType(type).body(resource);
     }
 
+    @GetMapping("/submissions/{submissionId}/revisions/{revisionId}/audio")
+    @Transactional(readOnly = true)
+    public ResponseEntity<Resource> revisionAudio(
+            Principal p, @PathVariable Long submissionId, @PathVariable Long revisionId) {
+        User t = teacher(p.getName());
+        SpeakingSubmission submission =
+                subs.findById(submissionId)
+                        .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bài nộp"));
+        owned(submission.getActivity().getId(), t.getId());
+        SpeakingRevision revision =
+                revisions
+                        .findByIdAndSubmissionId(revisionId, submissionId)
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "Không tìm thấy phiên bản ghi âm"));
+        Resource resource = media.load(revision.getRecordingUrl());
+        MediaType type;
+        try {
+            type = MediaType.parseMediaType(media.contentType(revision.getRecordingUrl()));
+        } catch (Exception ex) {
+            type = MediaType.APPLICATION_OCTET_STREAM;
+        }
+        return ResponseEntity.ok().contentType(type).body(resource);
+    }
+
     @PutMapping("/submissions/{submissionId}/grade")
     public SpeakingSubmissionResponse grade(
             Principal p, @PathVariable Long submissionId, @Valid @RequestBody GradeRequest r) {
@@ -150,7 +185,13 @@ public class SpeakingTeacherController {
                 subs.findById(submissionId)
                         .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bài nộp"));
         owned(s.getActivity().getId(), t.getId());
-        s.setScore(r.score());
+        if (r.rubric() == null) {
+            s.setScore(r.score());
+            clearRubric(s);
+        } else {
+            applyRubric(s, r.rubric());
+            s.setScore(weightedScore(r.rubric()));
+        }
         s.setFeedback(r.feedback() == null || r.feedback().isBlank() ? null : r.feedback().trim());
         s.setStatus(SpeakingSubmission.Status.GRADED);
         s.setGradedBy(t);
@@ -226,13 +267,82 @@ public class SpeakingTeacherController {
                 s.getScore(),
                 s.getFeedback(),
                 s.getSubmittedAt(),
-                s.getGradedAt());
+                s.getGradedAt(),
+                s.getRevisionNumber(),
+                rubric(s),
+                revisions.findAllBySubmissionIdOrderByRevisionNumberDesc(s.getId()).stream()
+                        .map(
+                                revision ->
+                                        new SpeakingRevisionResponse(
+                                                revision.getId(),
+                                                revision.getRevisionNumber(),
+                                                revision.getSubmittedAt()))
+                        .toList());
+    }
+
+    private void applyRubric(SpeakingSubmission submission, SpeakingRubric rubric) {
+        submission.setTaskCompletionScore(rubric.taskCompletionScore());
+        submission.setTaskCompletionFeedback(clean(rubric.taskCompletionFeedback()));
+        submission.setFluencyScore(rubric.fluencyScore());
+        submission.setFluencyFeedback(clean(rubric.fluencyFeedback()));
+        submission.setPronunciationScore(rubric.pronunciationScore());
+        submission.setPronunciationFeedback(clean(rubric.pronunciationFeedback()));
+        submission.setVocabularyGrammarScore(rubric.vocabularyGrammarScore());
+        submission.setVocabularyGrammarFeedback(clean(rubric.vocabularyGrammarFeedback()));
+    }
+
+    private void clearRubric(SpeakingSubmission submission) {
+        submission.setTaskCompletionScore(null);
+        submission.setTaskCompletionFeedback(null);
+        submission.setFluencyScore(null);
+        submission.setFluencyFeedback(null);
+        submission.setPronunciationScore(null);
+        submission.setPronunciationFeedback(null);
+        submission.setVocabularyGrammarScore(null);
+        submission.setVocabularyGrammarFeedback(null);
+    }
+
+    private SpeakingRubric rubric(SpeakingSubmission submission) {
+        if (submission.getTaskCompletionScore() == null
+                && submission.getFluencyScore() == null
+                && submission.getPronunciationScore() == null
+                && submission.getVocabularyGrammarScore() == null) {
+            return null;
+        }
+        return new SpeakingRubric(
+                submission.getTaskCompletionScore(),
+                submission.getTaskCompletionFeedback(),
+                submission.getFluencyScore(),
+                submission.getFluencyFeedback(),
+                submission.getPronunciationScore(),
+                submission.getPronunciationFeedback(),
+                submission.getVocabularyGrammarScore(),
+                submission.getVocabularyGrammarFeedback());
+    }
+
+    private BigDecimal weightedScore(SpeakingRubric rubric) {
+        return rubric.taskCompletionScore()
+                .multiply(new BigDecimal("0.30"))
+                .add(rubric.fluencyScore().multiply(new BigDecimal("0.25")))
+                .add(rubric.pronunciationScore().multiply(new BigDecimal("0.25")))
+                .add(rubric.vocabularyGrammarScore().multiply(new BigDecimal("0.20")))
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private String clean(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     public record GradeRequest(
-            @jakarta.validation.constraints.NotNull
-                    @jakarta.validation.constraints.DecimalMin("0.00")
+            @jakarta.validation.constraints.DecimalMin("0.00")
                     @jakarta.validation.constraints.DecimalMax("100.00")
                     java.math.BigDecimal score,
-            @jakarta.validation.constraints.Size(max = 65535) String feedback) {}
+            @jakarta.validation.constraints.Size(max = 65535) String feedback,
+            @jakarta.validation.Valid SpeakingRubric rubric) {
+        @jakarta.validation.constraints.AssertTrue(
+                        message = "Vui lòng nhập điểm tổng hoặc đủ điểm cho các tiêu chí rubric")
+        public boolean isScoreOrRubricPresent() {
+            return score != null || rubric != null;
+        }
+    }
 }

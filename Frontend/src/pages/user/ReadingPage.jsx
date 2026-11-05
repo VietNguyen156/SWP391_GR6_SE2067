@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import Icon from "../../components/common/Icon";
 import ErrorState from "../../components/common/ErrorState";
 import LoadingState from "../../components/common/LoadingState";
@@ -14,6 +14,13 @@ import { formatDateTime, formatPercent } from "../../utils/format";
 import { readingKind } from "../../utils/lessonMaterials";
 import { parseMarkdown, plainText } from "../../utils/markdown";
 
+const SKILL_LABELS = {
+  DETAIL: "Tìm thông tin chi tiết",
+  INFERENCE: "Suy luận từ ngữ cảnh",
+  VOCABULARY: "Từ vựng trong ngữ cảnh",
+  PURPOSE: "Mục đích / ý chính",
+};
+
 /**
  * Trang làm Reading: máy tính chia đôi như TOEIC Part 7 (trái: đoạn văn + tệp, cuộn riêng; phải: câu
  * hỏi). Điện thoại xếp chồng, có nút nổi "Xem lại đoạn văn". Sau khi nộp: điểm, Đúng/Sai, giải thích
@@ -21,9 +28,13 @@ import { parseMarkdown, plainText } from "../../utils/markdown";
  */
 export default function ReadingPage() {
   const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const practiceSkill = searchParams.get("practiceSkill");
+  const isNewPracticeAttempt = searchParams.get("new") === "1";
   const confirm = useConfirm();
   const [data, setData] = useState(null);
   const [answers, setAnswers] = useState({});
+  const [practiceHistory, setPracticeHistory] = useState([]);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [loadError, setLoadError] = useState(null);
@@ -38,13 +49,26 @@ export default function ReadingPage() {
     setData(null);
     setAnswers({});
     setResult(null);
+    setPracticeHistory([]);
     setError("");
     setLoadError(null);
     setFocus(null);
-    Promise.all([readingApi.studentGet(id), readingApi.result(id)])
-      .then(([activity, previous]) => {
+    const activityRequest = practiceSkill
+      ? readingApi.practiceGet(id, practiceSkill)
+      : readingApi.studentGet(id);
+    const resultRequest = practiceSkill
+      ? isNewPracticeAttempt
+        ? Promise.resolve(null)
+        : readingApi.practiceResult(id, practiceSkill)
+      : readingApi.result(id);
+    const historyRequest = practiceSkill
+      ? readingApi.practiceHistory(id, practiceSkill)
+      : Promise.resolve([]);
+    Promise.all([activityRequest, resultRequest, historyRequest])
+      .then(([activity, previous, history]) => {
         if (!active) return;
         setData(activity);
+        setPracticeHistory(history || []);
         if (previous) {
           setResult(previous);
           setAnswers(previous.answers || {});
@@ -54,7 +78,7 @@ export default function ReadingPage() {
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, practiceSkill, isNewPracticeAttempt]);
 
   // Nút nổi "Xem lại đoạn văn" chỉ hiện khi bài đọc đã cuộn khỏi màn hình (không che chữ khi đang đọc).
   useEffect(() => {
@@ -71,7 +95,11 @@ export default function ReadingPage() {
     if (unanswered) {
       const ok = await confirm({
         title: "Nộp bài khi chưa làm hết?",
-        message: `Bạn còn ${unanswered} câu chưa chọn đáp án. Câu bỏ trống sẽ tính là sai và bạn không thể làm lại.`,
+        message: `Bạn còn ${unanswered} câu chưa chọn đáp án. Câu bỏ trống sẽ tính là sai${
+          practiceSkill
+            ? ", nhưng bạn có thể luyện lượt mới sau khi xem kết quả."
+            : " và bạn không thể làm lại lượt đánh giá."
+        }`,
         confirmLabel: "Vẫn nộp bài",
         cancelLabel: "Làm tiếp",
       });
@@ -81,9 +109,12 @@ export default function ReadingPage() {
     setSubmitting(true);
     setError("");
     try {
-      const saved = await readingApi.submit(id, answers);
+      const saved = practiceSkill
+        ? await readingApi.practiceSubmit(id, practiceSkill, answers)
+        : await readingApi.submit(id, answers);
       setResult(saved);
       setAnswers(saved.answers || answers);
+      if (practiceSkill) setSearchParams({ practiceSkill }, { replace: true });
     } catch (e) {
       setError(apiError(e, "Không thể nộp bài").message || "Không thể nộp bài");
     } finally {
@@ -148,12 +179,79 @@ export default function ReadingPage() {
               <Icon name="check" size={20} />
             </div>
             <div>
-              <strong>Bài đã được nộp và lưu kết quả</strong>
+              <strong>
+                {result.attemptType === "TARGETED_PRACTICE"
+                  ? `Đã hoàn thành lượt luyện ${SKILL_LABELS[result.skillType] || "Reading"}`
+                  : "Bài đánh giá Reading đã được nộp và lưu kết quả"}
+              </strong>
               <span>
-                Mỗi câu có căn cứ: bấm “Xem căn cứ trong bài” để thấy câu văn chứa đáp án.
+                {result.attemptType === "TARGETED_PRACTICE"
+                  ? "Kết quả này được lưu riêng, không thay thế điểm đánh giá chính thức."
+                  : "Phân tích theo kỹ năng giúp chọn nội dung cần ôn lại; mỗi câu có căn cứ và giải thích."}
               </span>
             </div>
             {result.submittedAt && <time>{formatDateTime(result.submittedAt)}</time>}
+          </section>
+        )}
+
+        {result && result.attemptType !== "TARGETED_PRACTICE" && (
+          <section className="student-result-banner">
+            <div className="student-result-icon">
+              <Icon name="book" size={20} />
+            </div>
+            <div className="w-100">
+              <strong>Chẩn đoán kỹ năng và luyện tập có mục tiêu</strong>
+              <div className="d-flex flex-wrap gap-2 mt-2">
+                {Object.entries(result.skillAnalysis || {}).map(([skill, analysis]) => (
+                  <button
+                    className="btn btn-sm btn-outline-primary"
+                    key={skill}
+                    type="button"
+                    onClick={() => setSearchParams({ practiceSkill: skill })}
+                  >
+                    {SKILL_LABELS[skill] || skill}: {analysis.correct}/{analysis.total} đúng ·{" "}
+                    {formatPercent(analysis.score)}
+                    {analysis.score < 70 ? " · Ưu tiên luyện" : " · Đã khá"}
+                  </button>
+                ))}
+              </div>
+              {!Object.keys(result.skillAnalysis || {}).length && (
+                <span>Giáo viên chưa phân loại kỹ năng cho các câu hỏi của bài này.</span>
+              )}
+            </div>
+          </section>
+        )}
+
+        {practiceSkill && (
+          <section className="student-result-banner">
+            <div>
+              <strong>Luyện mục tiêu: {SKILL_LABELS[practiceSkill] || practiceSkill}</strong>
+              <span>
+                Bài luyện chỉ lấy câu hỏi thuộc kỹ năng này. Bạn có thể làm nhiều lượt; điểm được
+                lưu riêng theo từng lượt.
+              </span>
+              {result?.attemptType === "TARGETED_PRACTICE" && (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary mt-2"
+                  onClick={() => setSearchParams({ practiceSkill, new: "1" })}
+                >
+                  Luyện lại kỹ năng này
+                </button>
+              )}
+              {practiceHistory.length > 0 && (
+                <div className="small mt-2">
+                  Lịch sử:{" "}
+                  {practiceHistory
+                    .slice(0, 5)
+                    .map(
+                      (attempt, index) =>
+                        `Lượt ${practiceHistory.length - index}: ${attempt.correct}/${attempt.total} (${formatPercent(attempt.score)})`,
+                    )
+                    .join(" · ")}
+                </div>
+              )}
+            </div>
           </section>
         )}
 

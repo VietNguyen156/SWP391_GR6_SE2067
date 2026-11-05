@@ -14,6 +14,23 @@ const submissionStatus = (status) =>
   ({ SUBMITTED: "Đã nộp", GRADED: "Đã chấm", AUTO_SUBMITTED: "Đã nộp tự động" })[status] ||
   statusLabel(status);
 
+const RUBRIC_ITEMS = [
+  ["taskCompletionScore", "taskCompletionFeedback", "Hoàn thành yêu cầu", 30],
+  ["fluencyScore", "fluencyFeedback", "Độ lưu loát", 25],
+  ["pronunciationScore", "pronunciationFeedback", "Phát âm", 25],
+  ["vocabularyGrammarScore", "vocabularyGrammarFeedback", "Từ vựng & ngữ pháp", 20],
+];
+
+function rubricTotal(rubric) {
+  if (!rubric) return null;
+  const scores = RUBRIC_ITEMS.map(([scoreKey]) => rubric[scoreKey]);
+  if (scores.some((score) => score === "" || score === undefined || score === null)) return null;
+  return RUBRIC_ITEMS.reduce(
+    (total, [scoreKey, , , weight]) => total + (Number(rubric[scoreKey]) * weight) / 100,
+    0,
+  );
+}
+
 export default function ClassDetailPage() {
   const { id } = useParams();
   const [data, setData] = useState(null);
@@ -62,22 +79,39 @@ export default function ClassDetailPage() {
   }, [submissions]);
 
   async function grade(item) {
-    const score = grades[item.submissionId]?.score ?? item.score ?? "";
-    const feedback = grades[item.submissionId]?.feedback ?? item.feedback ?? "";
-    if (score === "" || score === undefined) {
-      setError("Vui lòng nhập điểm trước khi lưu chấm.");
+    const current = grades[item.submissionId] || {};
+    const rubric = Object.fromEntries(
+      RUBRIC_ITEMS.flatMap(([scoreKey, feedbackKey]) => [
+        [scoreKey, current[scoreKey] ?? item.rubric?.[scoreKey] ?? ""],
+        [feedbackKey, current[feedbackKey] ?? item.rubric?.[feedbackKey] ?? ""],
+      ]),
+    );
+    if (RUBRIC_ITEMS.some(([scoreKey]) => rubric[scoreKey] === "")) {
+      setError("Vui lòng chấm điểm đủ bốn tiêu chí trong barem Speaking.");
       return;
     }
-    const numericScore = Number(score);
-    if (Number.isNaN(numericScore) || numericScore < 0 || numericScore > 100) {
-      setError("Điểm Speaking phải nằm trong khoảng 0–100.");
+    if (
+      RUBRIC_ITEMS.some(
+        ([scoreKey]) =>
+          Number.isNaN(Number(rubric[scoreKey])) ||
+          Number(rubric[scoreKey]) < 0 ||
+          Number(rubric[scoreKey]) > 100,
+      )
+    ) {
+      setError("Điểm từng tiêu chí Speaking phải nằm trong khoảng 0–100.");
       return;
     }
+    const weightedScore = rubricTotal(rubric);
+    const feedback = current.feedback ?? item.feedback ?? "";
     setGradingId(item.submissionId);
     setError("");
     setMessage("");
     try {
-      await speakingApi.grade(item.submissionId, { score: numericScore, feedback });
+      await speakingApi.grade(item.submissionId, {
+        score: Number(weightedScore.toFixed(2)),
+        feedback,
+        rubric,
+      });
       await load();
       setMessage(`Đã lưu kết quả Speaking của ${item.studentName}.`);
     } catch (e) {
@@ -219,32 +253,110 @@ export default function ClassDetailPage() {
                           {item.type === "SPEAKING" && (
                             <div className="class-speaking-review">
                               {item.recordingUrl ? (
-                                <AudioPlayer
-                                  endpoint={`/teacher/speaking/submissions/${item.submissionId}/audio`}
-                                />
+                                <>
+                                  <small>Bản ghi hiện hành #{item.revisionNumber || 1}</small>
+                                  <AudioPlayer
+                                    endpoint={`/teacher/speaking/submissions/${item.submissionId}/audio`}
+                                  />
+                                </>
                               ) : (
                                 <span className="text-secondary">Không tìm thấy file ghi âm.</span>
                               )}
+                              {item.revisions
+                                ?.filter(
+                                  (revision) => revision.revisionNumber !== item.revisionNumber,
+                                )
+                                .map((revision) => (
+                                  <div className="my-2" key={revision.id}>
+                                    <small>
+                                      Bản ghi #{revision.revisionNumber} ·{" "}
+                                      {formatDateTime(revision.submittedAt)}
+                                    </small>
+                                    <AudioPlayer
+                                      endpoint={`/teacher/speaking/submissions/${item.submissionId}/revisions/${revision.id}/audio`}
+                                    />
+                                  </div>
+                                ))}
                               <div className="class-grade-form">
-                                <input
-                                  id={`class-score-${item.submissionId}`}
-                                  className="form-control"
-                                  type="number"
-                                  min="0"
-                                  max="100"
-                                  step="0.1"
-                                  value={grades[item.submissionId]?.score ?? item.score ?? ""}
-                                  onChange={(event) =>
-                                    setGrades((current) => ({
-                                      ...current,
-                                      [item.submissionId]: {
-                                        ...current[item.submissionId],
-                                        score: event.target.value,
-                                      },
-                                    }))
-                                  }
-                                  placeholder="Điểm 0–100"
-                                />
+                                <div className="w-100">
+                                  <strong>Barem chấm điểm</strong>
+                                  {RUBRIC_ITEMS.map(([scoreKey, feedbackKey, label, weight]) => (
+                                    <div className="row g-2 align-items-start mt-1" key={scoreKey}>
+                                      <div className="col-md-5">
+                                        <label
+                                          className="form-label"
+                                          htmlFor={`class-${scoreKey}-${item.submissionId}`}
+                                        >
+                                          {label} ({weight}%)
+                                        </label>
+                                        <input
+                                          id={`class-${scoreKey}-${item.submissionId}`}
+                                          className="form-control"
+                                          type="number"
+                                          min="0"
+                                          max="100"
+                                          step="0.1"
+                                          value={
+                                            grades[item.submissionId]?.[scoreKey] ??
+                                            item.rubric?.[scoreKey] ??
+                                            ""
+                                          }
+                                          onChange={(event) =>
+                                            setGrades((current) => ({
+                                              ...current,
+                                              [item.submissionId]: {
+                                                ...current[item.submissionId],
+                                                [scoreKey]: event.target.value,
+                                              },
+                                            }))
+                                          }
+                                          placeholder="Điểm 0–100"
+                                        />
+                                      </div>
+                                      <div className="col-md-7">
+                                        <label
+                                          className="form-label"
+                                          htmlFor={`class-${feedbackKey}-${item.submissionId}`}
+                                        >
+                                          Nhận xét tiêu chí
+                                        </label>
+                                        <input
+                                          id={`class-${feedbackKey}-${item.submissionId}`}
+                                          className="form-control"
+                                          value={
+                                            grades[item.submissionId]?.[feedbackKey] ??
+                                            item.rubric?.[feedbackKey] ??
+                                            ""
+                                          }
+                                          onChange={(event) =>
+                                            setGrades((current) => ({
+                                              ...current,
+                                              [item.submissionId]: {
+                                                ...current[item.submissionId],
+                                                [feedbackKey]: event.target.value,
+                                              },
+                                            }))
+                                          }
+                                          placeholder="Góp ý cụ thể (không bắt buộc)"
+                                        />
+                                      </div>
+                                    </div>
+                                  ))}
+                                  <small className="d-block mt-2">
+                                    Điểm tổng theo trọng số:{" "}
+                                    {rubricTotal({
+                                      ...item.rubric,
+                                      ...grades[item.submissionId],
+                                    }) === null
+                                      ? "nhập đủ tiêu chí để tính"
+                                      : `${formatNumber(
+                                          rubricTotal({
+                                            ...item.rubric,
+                                            ...grades[item.submissionId],
+                                          }),
+                                        )}/100`}
+                                  </small>
+                                </div>
                                 <input
                                   id={`class-feedback-${item.submissionId}`}
                                   className="form-control"

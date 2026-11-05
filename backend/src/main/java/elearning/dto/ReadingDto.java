@@ -1,6 +1,7 @@
 package elearning.dto;
 
 import elearning.dto.GrammarDto.AttachmentResponse;
+import elearning.entity.ReadingQuestion;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -29,6 +30,7 @@ public final class ReadingDto {
                 @NotBlank String questionText,
                 String explanation,
                 String evidence,
+                ReadingQuestion.SkillType skillType,
                 @NotNull @Size(min = 2) List<@NotNull @Valid Option> options) {
             @AssertTrue(message = "Mỗi câu hỏi phải có đúng một đáp án đúng")
             public boolean isExactlyOneCorrect() {
@@ -64,6 +66,7 @@ public final class ReadingDto {
                 String questionText,
                 String explanation,
                 String evidence,
+                ReadingQuestion.SkillType skillType,
                 List<Option> options) {}
 
         public record Option(Long id, String optionText, boolean correct) {}
@@ -79,7 +82,20 @@ public final class ReadingDto {
             Map<Long, Long> correctAnswers,
             /** Câu → giải thích / căn cứ trong bài (chỉ sau khi nộp). */
             Map<Long, String> explanations,
-            Map<Long, String> evidence) {}
+            Map<Long, String> evidence,
+            String attemptType,
+            String skillType,
+            Map<String, SkillAnalysis> skillAnalysis) {}
+
+    public record SkillAnalysis(int correct, int total, BigDecimal score) {}
+
+    public record PracticeAttemptSummary(
+            Long attemptId,
+            String skillType,
+            BigDecimal score,
+            int correct,
+            int total,
+            LocalDateTime submittedAt) {}
 
     public record ReadingSubmitRequest(Map<Long, Long> answers) {}
 }

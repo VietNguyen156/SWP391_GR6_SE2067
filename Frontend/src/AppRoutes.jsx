@@ -60,6 +60,7 @@ import QuestionBankPage from "./pages/teacher/QuestionBankPage";
 import FinalTestEditorPage from "./pages/teacher/FinalTestEditorPage";
 import FinalTestGradingPage from "./pages/teacher/FinalTestGradingPage";
 import FinalTestPage from "./pages/user/FinalTestPage";
+import ExamPracticePage from "./pages/user/ExamPracticePage";
 
 // A different resource must not inherit answers, recordings or edit forms from the previous one.
 function DetailPage({ component: Component, ...props }) {
@@ -113,6 +114,7 @@ export default function AppRoutes() {
           <Route path="reading/:id" element={<DetailPage component={ReadingPage} />} />
           <Route path="speaking/:id" element={<DetailPage component={SpeakingPage} />} />
           <Route path="results" element={<ResultsPage />} />
+          <Route path="practice" element={<ExamPracticePage />} />
           <Route path="orders" element={<Navigate to="/results?tab=orders" replace />} />
           <Route path="orders/:code" element={<DetailPage component={OrderPage} />} />
           <Route path="dashboard" element={<StudentDashboardPage />} />

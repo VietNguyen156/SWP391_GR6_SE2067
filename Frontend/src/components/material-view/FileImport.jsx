@@ -172,9 +172,20 @@ export default function FileImport({
 
 /** Bản xem trước một câu trắc nghiệm: nội dung, các đáp án, đáp án đúng in đậm. */
 export function McqPreview({ q }) {
+  const skillLabels = {
+    DETAIL: "Tìm thông tin chi tiết",
+    INFERENCE: "Suy luận từ ngữ cảnh",
+    VOCABULARY: "Từ vựng trong ngữ cảnh",
+    PURPOSE: "Mục đích / ý chính",
+  };
   return (
     <>
       <div style={{ whiteSpace: "pre-line" }}>{q.questionText}</div>
+      {q.skillType && (
+        <div className="text-primary small fw-semibold">
+          Kỹ năng: {skillLabels[q.skillType] || q.skillType}
+        </div>
+      )}
       <ul className="list-unstyled ms-2 mb-0">
         {q.options.map((o, i) => (
           <li key={i} className={o.correct ? "fw-bold text-success" : undefined}>

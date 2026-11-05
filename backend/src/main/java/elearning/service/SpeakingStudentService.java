@@ -1,9 +1,12 @@
 package elearning.service;
 
 import elearning.dto.SpeakingDto.SpeakingResponse;
+import elearning.dto.SpeakingDto.SpeakingRevisionResponse;
+import elearning.dto.SpeakingDto.SpeakingRubric;
 import elearning.dto.SpeakingDto.SpeakingSubmissionResponse;
 import elearning.entity.ClassEnrollment;
 import elearning.entity.SpeakingActivity;
+import elearning.entity.SpeakingRevision;
 import elearning.entity.SpeakingSubmission;
 import elearning.entity.User;
 import elearning.entity.UserRole;
@@ -11,6 +14,7 @@ import elearning.entity.UserStatus;
 import elearning.repository.ClassEnrollmentRepository;
 import elearning.repository.SpeakingActivityRepository;
 import elearning.repository.SpeakingSubmissionRepository;
+import elearning.repository.SpeakingRevisionRepository;
 import elearning.repository.UserRepository;
 
 import org.slf4j.Logger;
@@ -32,6 +36,7 @@ public class SpeakingStudentService {
 
     private final SpeakingActivityRepository activities;
     private final SpeakingSubmissionRepository submissions;
+    private final SpeakingRevisionRepository revisions;
     private final UserRepository users;
     private final ClassEnrollmentRepository enrollments;
     private final MediaStorageService media;
@@ -40,12 +45,14 @@ public class SpeakingStudentService {
     public SpeakingStudentService(
             SpeakingActivityRepository activities,
             SpeakingSubmissionRepository submissions,
+            SpeakingRevisionRepository revisions,
             UserRepository users,
             ClassEnrollmentRepository enrollments,
             MediaStorageService media,
             LessonService lessonService) {
         this.activities = activities;
         this.submissions = submissions;
+        this.revisions = revisions;
         this.users = users;
         this.enrollments = enrollments;
         this.media = media;
@@ -105,6 +112,35 @@ public class SpeakingStudentService {
         return new SubmissionAudio(resource, type);
     }
 
+    @Transactional(readOnly = true)
+    public SubmissionAudio revisionAudio(String email, Long submissionId, Long revisionId) {
+        User student = student(email);
+        SpeakingSubmission submission =
+                submissions
+                        .findById(submissionId)
+                        .filter(item -> item.getStudent().getId().equals(student.getId()))
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "Không tìm thấy bài ghi âm của bạn"));
+        requireEnrollment(student, submission.getActivity());
+        SpeakingRevision revision =
+                revisions
+                        .findByIdAndSubmissionId(revisionId, submissionId)
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "Không tìm thấy phiên bản ghi âm"));
+        Resource resource = media.load(revision.getRecordingUrl());
+        MediaType type;
+        try {
+            type = MediaType.parseMediaType(media.contentType(revision.getRecordingUrl()));
+        } catch (Exception ex) {
+            type = MediaType.APPLICATION_OCTET_STREAM;
+        }
+        return new SubmissionAudio(resource, type);
+    }
+
     public SpeakingSubmissionResponse submit(String email, Long id, MultipartFile audio)
             throws IOException {
         User student = student(email);
@@ -117,9 +153,23 @@ public class SpeakingStudentService {
                 submissions
                         .findByActivityIdAndStudentId(id, student.getId())
                         .orElseGet(SpeakingSubmission::new);
+        boolean firstSubmission = submission.getId() == null;
         if (submission.getId() != null && submission.getStatus() == SpeakingSubmission.Status.GRADED) {
             throw new IllegalArgumentException(
                     "Bài Speaking đã được giáo viên chấm nên không thể nộp lại");
+        }
+        int nextRevision =
+                firstSubmission || submission.getRevisionNumber() == null
+                        ? 1
+                        : submission.getRevisionNumber() + 1;
+        if (!firstSubmission
+                && !revisions.existsBySubmissionIdAndRevisionNumber(
+                        submission.getId(), submission.getRevisionNumber())) {
+            saveRevision(
+                    submission,
+                    submission.getRevisionNumber(),
+                    submission.getRecordingUrl(),
+                    submission.getSubmittedAt());
         }
 
         log.info(
@@ -137,12 +187,15 @@ public class SpeakingStudentService {
         submission.setRecordingUrl(recordingUrl);
         submission.setSubmittedAt(LocalDateTime.now());
         submission.setStatus(SpeakingSubmission.Status.SUBMITTED);
+        submission.setRevisionNumber(nextRevision);
         submission.setScore(null);
         submission.setFeedback(null);
         submission.setGradedAt(null);
         submission.setGradedBy(null);
+        clearRubric(submission);
 
         SpeakingSubmission saved = submissions.saveAndFlush(submission);
+        saveRevision(saved, nextRevision, recordingUrl, saved.getSubmittedAt());
         log.info(
                 "Speaking upload saved: submissionId={}, activityId={}, studentId={}, url={}",
                 saved.getId(),
@@ -219,7 +272,59 @@ public class SpeakingStudentService {
                 submission.getScore(),
                 submission.getFeedback(),
                 submission.getSubmittedAt(),
-                submission.getGradedAt());
+                submission.getGradedAt(),
+                submission.getRevisionNumber(),
+                rubric(submission),
+                revisions.findAllBySubmissionIdOrderByRevisionNumberDesc(submission.getId()).stream()
+                        .map(
+                                revision ->
+                                        new SpeakingRevisionResponse(
+                                                revision.getId(),
+                                                revision.getRevisionNumber(),
+                                                revision.getSubmittedAt()))
+                        .toList());
+    }
+
+    private void saveRevision(
+            SpeakingSubmission submission,
+            int revisionNumber,
+            String recordingUrl,
+            LocalDateTime submittedAt) {
+        SpeakingRevision revision = new SpeakingRevision();
+        revision.setSubmission(submission);
+        revision.setRevisionNumber(revisionNumber);
+        revision.setRecordingUrl(recordingUrl);
+        revision.setSubmittedAt(submittedAt);
+        revisions.save(revision);
+    }
+
+    private SpeakingRubric rubric(SpeakingSubmission submission) {
+        if (submission.getTaskCompletionScore() == null
+                && submission.getFluencyScore() == null
+                && submission.getPronunciationScore() == null
+                && submission.getVocabularyGrammarScore() == null) {
+            return null;
+        }
+        return new SpeakingRubric(
+                submission.getTaskCompletionScore(),
+                submission.getTaskCompletionFeedback(),
+                submission.getFluencyScore(),
+                submission.getFluencyFeedback(),
+                submission.getPronunciationScore(),
+                submission.getPronunciationFeedback(),
+                submission.getVocabularyGrammarScore(),
+                submission.getVocabularyGrammarFeedback());
+    }
+
+    private void clearRubric(SpeakingSubmission submission) {
+        submission.setTaskCompletionScore(null);
+        submission.setTaskCompletionFeedback(null);
+        submission.setFluencyScore(null);
+        submission.setFluencyFeedback(null);
+        submission.setPronunciationScore(null);
+        submission.setPronunciationFeedback(null);
+        submission.setVocabularyGrammarScore(null);
+        submission.setVocabularyGrammarFeedback(null);
     }
 
     public record SubmissionAudio(Resource resource, MediaType contentType) {}

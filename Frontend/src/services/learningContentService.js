@@ -105,8 +105,22 @@ export const readingApi = {
     const response = await axiosClient.get(`/reading/${id}/result`);
     return response.status === 204 ? null : response.data;
   },
+  practiceGet: async (id, skillType) =>
+    (await axiosClient.get(`/reading/${id}/practice/${skillType}`)).data,
+  practiceResult: async (id, skillType) => {
+    const response = await axiosClient.get(`/reading/${id}/practice/${skillType}/result`);
+    return response.status === 204 ? null : response.data;
+  },
+  practiceHistory: async (id, skillType) =>
+    (await axiosClient.get(`/reading/${id}/practice/${skillType}/history`)).data,
   submit: async (id, answers) =>
     (await axiosClient.post(`/reading/${id}/submit`, { answers })).data,
+  practiceSubmit: async (id, skillType, answers) =>
+    (
+      await axiosClient.post(`/reading/${id}/practice/${skillType}/submit`, {
+        answers,
+      })
+    ).data,
 };
 
 export const speakingApi = {
@@ -137,6 +151,10 @@ export const speakingApi = {
       })
     ).data;
   },
+};
+
+export const studentPracticeApi = {
+  plan: async () => (await axiosClient.get("/student/practice/plan")).data,
 };
 
 export const reviewApi = {

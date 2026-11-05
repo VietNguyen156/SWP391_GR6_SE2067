@@ -3,6 +3,8 @@ package elearning.controller;
 import elearning.dto.ReadingDto.ReadingResponse;
 import elearning.dto.ReadingDto.ReadingResultResponse;
 import elearning.dto.ReadingDto.ReadingSubmitRequest;
+import elearning.dto.ReadingDto.PracticeAttemptSummary;
+import elearning.dto.ReadingDto.SkillAnalysis;
 import elearning.entity.ReadingActivity;
 import elearning.entity.ReadingAnswer;
 import elearning.entity.ReadingAttempt;
@@ -77,10 +79,89 @@ public class ReadingStudentController {
     public ResponseEntity<ReadingResultResponse> latestResult(Principal p, @PathVariable Long id) {
         User student = student(p.getName());
         reading.requireStudentAccess(student, reading.visible(id));
-        return attempts.findTopByActivityIdAndStudentIdOrderBySubmittedAtDesc(id, student.getId())
+        return attempts.findFirstByActivityIdAndStudentIdAndAssessmentSlot(
+                        id, student.getId(), 1)
                 .map(this::result)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    @GetMapping("/{id}/practice/{skillType}")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ReadingResponse practice(
+            Principal p,
+            @PathVariable Long id,
+            @PathVariable ReadingQuestion.SkillType skillType) {
+        User student = student(p.getName());
+        ReadingActivity activity = reading.visible(id);
+        reading.requireStudentAccess(student, activity);
+        ReadingResponse response = reading.response(activity, false);
+        List<ReadingResponse.Question> selected =
+                response.questions().stream()
+                        .filter(question -> question.skillType() == skillType)
+                        .toList();
+        if (selected.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Bài đọc chưa có câu hỏi thuộc kỹ năng " + skillType.name());
+        }
+        return new ReadingResponse(
+                response.id(),
+                response.courseWeekId(),
+                response.lessonId(),
+                response.title(),
+                response.description(),
+                response.instruction(),
+                response.passage(),
+                response.passageFormat(),
+                response.toeicPart(),
+                response.passageType(),
+                response.status(),
+                selected,
+                response.attachments(),
+                false,
+                0);
+    }
+
+    @GetMapping("/{id}/practice/{skillType}/result")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ReadingResultResponse> latestPracticeResult(
+            Principal p,
+            @PathVariable Long id,
+            @PathVariable ReadingQuestion.SkillType skillType) {
+        User student = student(p.getName());
+        reading.requireStudentAccess(student, reading.visible(id));
+        return attempts
+                .findFirstByActivityIdAndStudentIdAndTypeAndPracticeSkillOrderBySubmittedAtDesc(
+                        id, student.getId(), ReadingAttempt.Type.TARGETED_PRACTICE, skillType)
+                .map(this::result)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    @GetMapping("/{id}/practice/{skillType}/history")
+    @PreAuthorize("hasRole('STUDENT')")
+    public List<PracticeAttemptSummary> practiceHistory(
+            Principal p,
+            @PathVariable Long id,
+            @PathVariable ReadingQuestion.SkillType skillType) {
+        User student = student(p.getName());
+        reading.requireStudentAccess(student, reading.visible(id));
+        return attempts
+                .findAllByActivityIdAndStudentIdAndTypeAndPracticeSkillOrderBySubmittedAtDesc(
+                        id, student.getId(), ReadingAttempt.Type.TARGETED_PRACTICE, skillType)
+                .stream()
+                .map(
+                        attempt -> {
+                            ReadingResultResponse result = result(attempt);
+                            return new PracticeAttemptSummary(
+                                    result.attemptId(),
+                                    result.skillType(),
+                                    result.score(),
+                                    result.correct(),
+                                    result.total(),
+                                    result.submittedAt());
+                        })
+                .toList();
     }
 
     @PostMapping("/{id}/submit")
@@ -90,38 +171,52 @@ public class ReadingStudentController {
         User st = student(p.getName());
         ReadingActivity a = reading.visible(id);
         reading.requireStudentAccess(st, a);
-        // Mỗi học viên một lượt: nộp lại (bấm hai lần, tải lại trang) trả về kết quả đã lưu.
-        var existing = attempts.findTopByActivityIdAndStudentIdOrderBySubmittedAtDesc(id, st.getId());
+        // Lượt đánh giá chính thức là duy nhất; request lặp lại trả kết quả đã lưu.
+        var existing =
+                attempts.findFirstByActivityIdAndStudentIdAndAssessmentSlot(
+                        id, st.getId(), 1);
         if (existing.isPresent()) return result(existing.get());
 
-        ReadingAttempt at = new ReadingAttempt();
-        at.setActivity(a);
-        at.setStudent(st);
-        attempts.save(at);
-        int total = 0, correct = 0;
-        for (ReadingQuestion q : qs.findAllByActivityIdOrderBySortOrderAsc(id)) {
-            total++;
-            Long oid = r.answers() == null ? null : r.answers().get(q.getId());
-            ReadingOption opt =
-                    q.getOptions().stream()
-                            .filter(o -> Objects.equals(o.getId(), oid))
-                            .findFirst()
-                            .orElse(null);
-            ReadingAnswer an = new ReadingAnswer();
-            an.setAttempt(at);
-            an.setQuestion(q);
-            an.setOption(opt);
-            an.setCorrect(opt != null && opt.isCorrect());
-            answers.save(an);
-            if (an.isCorrect()) correct++;
-        }
-        at.setScore(
-                total == 0
-                        ? BigDecimal.ZERO
-                        : BigDecimal.valueOf(correct * 100.0 / total).setScale(2, RoundingMode.HALF_UP));
-        attempts.save(at);
+        ReadingAttempt at =
+                saveAttempt(
+                        a,
+                        st,
+                        qs.findAllByActivityIdOrderBySortOrderAsc(id),
+                        r,
+                        ReadingAttempt.Type.ASSESSMENT,
+                        null,
+                        1);
         lessonService.autoComplete(st, a.getLesson());
         return result(at);
+    }
+
+    @PostMapping("/{id}/practice/{skillType}/submit")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ReadingResultResponse submitPractice(
+            Principal p,
+            @PathVariable Long id,
+            @PathVariable ReadingQuestion.SkillType skillType,
+            @RequestBody ReadingSubmitRequest request) {
+        User student = student(p.getName());
+        ReadingActivity activity = reading.visible(id);
+        reading.requireStudentAccess(student, activity);
+        List<ReadingQuestion> questions =
+                qs.findAllByActivityIdOrderBySortOrderAsc(id).stream()
+                        .filter(question -> question.getSkillType() == skillType)
+                        .toList();
+        if (questions.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Bài đọc chưa có câu hỏi thuộc kỹ năng " + skillType.name());
+        }
+        return result(
+                saveAttempt(
+                        activity,
+                        student,
+                        questions,
+                        request,
+                        ReadingAttempt.Type.TARGETED_PRACTICE,
+                        skillType,
+                        null));
     }
 
     /** pdf, ảnh mở trực tiếp (inline); Word tải về. */
@@ -158,8 +253,15 @@ public class ReadingStudentController {
         Map<Long, Long> key = new LinkedHashMap<>();
         Map<Long, String> explanations = new LinkedHashMap<>();
         Map<Long, String> evidence = new LinkedHashMap<>();
-        for (ReadingQuestion q :
-                qs.findAllByActivityIdOrderBySortOrderAsc(attempt.getActivity().getId())) {
+        Map<String, int[]> skillCounts = new LinkedHashMap<>();
+        for (ReadingAnswer row : rows) {
+            ReadingQuestion q = row.getQuestion();
+            String skill =
+                    (q.getSkillType() == null ? ReadingQuestion.SkillType.DETAIL : q.getSkillType())
+                            .name();
+            int[] counts = skillCounts.computeIfAbsent(skill, ignored -> new int[2]);
+            counts[1]++;
+            if (row.isCorrect()) counts[0]++;
             q.getOptions().stream()
                     .filter(ReadingOption::isCorrect)
                     .findFirst()
@@ -167,6 +269,16 @@ public class ReadingStudentController {
             if (q.getExplanation() != null) explanations.put(q.getId(), q.getExplanation());
             if (q.getEvidence() != null) evidence.put(q.getId(), q.getEvidence());
         }
+        Map<String, SkillAnalysis> analysis = new LinkedHashMap<>();
+        skillCounts.forEach(
+                (skill, counts) ->
+                        analysis.put(
+                                skill,
+                                new SkillAnalysis(
+                                        counts[0],
+                                        counts[1],
+                                        BigDecimal.valueOf(counts[0] * 100.0 / counts[1])
+                                                .setScale(2, RoundingMode.HALF_UP))));
         return new ReadingResultResponse(
                 attempt.getId(),
                 attempt.getScore(),
@@ -176,7 +288,50 @@ public class ReadingStudentController {
                 selected,
                 key,
                 explanations,
-                evidence);
+                evidence,
+                attempt.getType().name(),
+                attempt.getPracticeSkill() == null ? null : attempt.getPracticeSkill().name(),
+                analysis);
+    }
+
+    private ReadingAttempt saveAttempt(
+            ReadingActivity activity,
+            User student,
+            List<ReadingQuestion> questions,
+            ReadingSubmitRequest request,
+            ReadingAttempt.Type type,
+            ReadingQuestion.SkillType skillType,
+            Integer assessmentSlot) {
+        if (request == null) {
+            throw new IllegalArgumentException("Thiếu câu trả lời Reading");
+        }
+        ReadingAttempt attempt = new ReadingAttempt();
+        attempt.setActivity(activity);
+        attempt.setStudent(student);
+        attempt.setType(type);
+        attempt.setPracticeSkill(skillType);
+        attempt.setAssessmentSlot(assessmentSlot);
+        attempts.save(attempt);
+        int correct = 0;
+        for (ReadingQuestion question : questions) {
+            Long optionId = request.answers() == null ? null : request.answers().get(question.getId());
+            ReadingOption option =
+                    question.getOptions().stream()
+                            .filter(candidate -> Objects.equals(candidate.getId(), optionId))
+                            .findFirst()
+                            .orElse(null);
+            ReadingAnswer answer = new ReadingAnswer();
+            answer.setAttempt(attempt);
+            answer.setQuestion(question);
+            answer.setOption(option);
+            answer.setCorrect(option != null && option.isCorrect());
+            answers.save(answer);
+            if (answer.isCorrect()) correct++;
+        }
+        attempt.setScore(
+                BigDecimal.valueOf(correct * 100.0 / questions.size())
+                        .setScale(2, RoundingMode.HALF_UP));
+        return attempts.save(attempt);
     }
 
     private User student(String email) {

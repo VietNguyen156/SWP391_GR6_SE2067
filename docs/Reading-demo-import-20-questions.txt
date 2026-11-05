@@ -1,0 +1,266 @@
+# READING DEMO SET: GREENFIELD OFFICE SERVICES
+# Bộ dữ liệu tự biên soạn để demo Reading Part 7 và luyện theo kỹ năng.
+# HƯỚNG DẪN: copy hai đoạn văn bên dưới vào ô Đoạn văn của bài Reading.
+# Sau đó dùng chức năng "Nhập nhanh từ file .txt hoặc Word (.docx)" để import chính file này.
+# Các dòng bắt đầu bằng # là ghi chú nên importer sẽ bỏ qua.
+# Bài gợi ý: TOEIC Part 7, DOUBLE, 20 câu. Mỗi kỹ năng có đúng 5 câu.
+# Tạo bài mới → chọn Part 7 và DOUBLE → dán nội dung hai email/thông báo bên dưới
+# (bỏ dấu # ở đầu các dòng văn bản) vào ô Đoạn văn → nhập câu hỏi từ file này.
+# Kỹ năng hợp lệ: DETAIL, INFERENCE, VOCABULARY, PURPOSE.
+#
+# PASSAGE 1 — EMAIL
+# To: Greenfield Office Services Team
+# From: Maya Chen, Operations Manager
+# Date: September 8
+# Subject: New equipment request procedure
+#
+# Hello everyone,
+#
+# Starting September 15, please submit all requests for office equipment through the new
+# Facilities Portal. The portal replaces the paper forms that were previously left in the
+# supply room. Employees should select "Equipment Request," describe the item, and choose
+# either "standard" or "urgent" service. Requests marked urgent must include a short
+# explanation and the approval code from the employee's department supervisor.
+#
+# Standard requests are normally processed within four business days. Urgent requests
+# received before 11:00 a.m. are reviewed on the same day, although delivery may take
+# another business day. The Facilities team will send an e-mail when an item is ready for
+# collection at the east reception desk. Large items, including chairs and printers, will
+# be delivered directly to the employee's floor.
+#
+# During the first week, the old paper forms will remain available for employees who have
+# trouble signing in. Please contact Daniel Ruiz at extension 248 if you cannot access the
+# portal. Do not send equipment requests to the general help desk; that team handles
+# computer and network problems only.
+#
+# Thank you,
+# Maya
+
+1. Why did Ms. Chen write the e-mail?
+A. To announce a new procedure for requesting equipment
+B. To introduce a new employee to the Facilities team
+C. To report a delay in a printer delivery
+D. To invite employees to a supply-room meeting
+Đáp án: A
+Kỹ năng: PURPOSE
+Giải thích: The e-mail explains a new portal and process for submitting equipment requests.
+Căn cứ: Starting September 15, please submit all requests for office equipment through the new Facilities Portal.
+
+2. When should employees begin using the Facilities Portal?
+A. September 8
+B. September 15
+C. September 18
+D. October 1
+Đáp án: B
+Kỹ năng: DETAIL
+Giải thích: The start date is explicitly stated in the first paragraph.
+Căn cứ: Starting September 15, please submit all requests for office equipment through the new Facilities Portal.
+
+3. What can be inferred about an urgent request submitted at 1:00 p.m.?
+A. It will automatically be rejected.
+B. It may not be reviewed until the next day.
+C. It will be delivered before the end of that day.
+D. It does not require supervisor approval.
+Đáp án: B
+Kỹ năng: INFERENCE
+Giải thích: Only urgent requests received before 11:00 a.m. are reviewed on the same day.
+Căn cứ: Urgent requests received before 11:00 a.m. are reviewed on the same day, although delivery may take another business day.
+
+4. In the e-mail, what does "processed" most nearly mean?
+A. Repaired
+B. Recorded
+C. Handled
+D. Purchased
+Đáp án: C
+Kỹ năng: VOCABULARY
+Giải thích: A request processed within four days is handled or dealt with within that period.
+Căn cứ: Standard requests are normally processed within four business days.
+
+5. Where will employees collect most small equipment items?
+A. At the east reception desk
+B. In the supply room
+C. On the employee's floor
+D. At the general help desk
+Đáp án: A
+Kỹ năng: DETAIL
+Giải thích: The Facilities team sends an e-mail when an item is ready at east reception.
+Căn cứ: The Facilities team will send an e-mail when an item is ready for collection at the east reception desk.
+
+6. What is the purpose of the old paper forms during the first week?
+A. To record deliveries made by the general help desk
+B. To help employees who cannot sign in to the portal
+C. To request supervisor approval for all purchases
+D. To replace the portal permanently
+Đáp án: B
+Kỹ năng: PURPOSE
+Giải thích: The paper forms remain temporarily available as a fallback for sign-in problems.
+Căn cứ: During the first week, the old paper forms will remain available for employees who have trouble signing in.
+
+7. What will an employee probably do if unable to access the portal?
+A. E-mail the general help desk about equipment
+B. Leave a form beside the printer
+C. Call Daniel Ruiz
+D. Wait until the next month
+Đáp án: C
+Kỹ năng: INFERENCE
+Giải thích: The message directs employees with access problems to Daniel Ruiz.
+Căn cứ: Please contact Daniel Ruiz at extension 248 if you cannot access the portal.
+
+8. What does "urgent" most nearly mean?
+A. Needed quickly
+B. Already delivered
+C. Difficult to carry
+D. Not approved
+Đáp án: A
+Kỹ năng: VOCABULARY
+Giải thích: Urgent requests receive faster review than standard requests.
+Căn cứ: Requests marked urgent must include a short explanation and the approval code from the employee's department supervisor.
+
+9. What can be inferred about the approval process for urgent requests?
+A. An urgent request must include authorization from the employee's supervisor.
+B. The Facilities team approves every request before it is submitted.
+C. Standard requests always require an approval code.
+D. Employees may request urgent service without explaining why.
+Đáp án: A
+Kỹ năng: INFERENCE
+Giải thích: The message says urgent requests need both an explanation and a supervisor's approval code.
+Căn cứ: Requests marked urgent must include a short explanation and the approval code from the employee's department supervisor.
+
+10. Why does Ms. Chen mention the general help desk?
+A. To explain that equipment requests should be sent there
+B. To clarify that it handles computer and network problems, not equipment requests
+C. To announce that it will close during the first week
+D. To ask employees to send their approval codes there
+Đáp án: B
+Kỹ năng: PURPOSE
+Giải thích: The final paragraph distinguishes the help desk's responsibility from equipment requests.
+Căn cứ: Do not send equipment requests to the general help desk; that team handles computer and network problems only.
+
+# PASSAGE 2 — CUSTOMER E-MAIL AND SERVICE NOTICE
+# To: Jordan Lee
+# From: Greenfield Office Services
+# Date: October 3
+# Subject: Replacement chair delivery
+#
+# Dear Mr. Lee,
+#
+# We are writing about your equipment request, number GF-1842. The replacement chair
+# originally scheduled for delivery on October 5 will arrive on October 7 because the
+# warehouse received the wrong model. We apologize for the inconvenience.
+#
+# You do not need to submit another request. The delivery team will bring the chair to
+# the 4th-floor reception area between 1:00 and 3:00 p.m. on October 7. Please show the
+# team the confirmation number in this e-mail. If no one is available to receive the
+# chair, it will be taken back to the warehouse and a new delivery date will be arranged.
+#
+# If October 7 does not work for you, reply to this e-mail by noon on October 4. We can
+# arrange delivery on October 9 instead. Please note that the delivery team cannot leave
+# large items in an unattended hallway.
+#
+# Sincerely,
+# Greenfield Office Services
+#
+# SERVICE NOTICE
+# The east reception desk will close at 4:30 p.m. on October 7 for a scheduled fire alarm
+# inspection. Employees collecting small parcels should arrive before closing. Large
+# furniture deliveries will continue to the floor listed on the approved request.
+
+11. Why was the chair delivery delayed?
+A. The delivery team could not find Mr. Lee's office.
+B. The warehouse received an incorrect chair model.
+C. The east reception desk closed early.
+D. Mr. Lee submitted a second request.
+Đáp án: B
+Kỹ năng: DETAIL
+Giải thích: The e-mail directly gives the reason for the delay.
+Căn cứ: The replacement chair originally scheduled for delivery on October 5 will arrive on October 7 because the warehouse received the wrong model.
+
+12. What can be inferred about Mr. Lee's original request?
+A. It was approved and assigned a confirmation number.
+B. It was sent to the general help desk.
+C. It was for a small parcel.
+D. It has already been canceled.
+Đáp án: A
+Kỹ năng: INFERENCE
+Giải thích: The request has an ID and a scheduled delivery; the e-mail says no replacement request is needed.
+Căn cứ: We are writing about your equipment request, number GF-1842.
+
+13. What does "arranged" most nearly mean in the e-mail?
+A. Organized
+B. Delayed indefinitely
+C. Paid for
+D. Inspected
+Đáp án: A
+Kỹ năng: VOCABULARY
+Giải thích: A new delivery date will be organized if the first delivery cannot be completed.
+Căn cứ: If no one is available to receive the chair, it will be taken back to the warehouse and a new delivery date will be arranged.
+
+14. Why was the service notice included?
+A. To explain a temporary change affecting the reception desk
+B. To announce that all furniture deliveries are canceled
+C. To request a fire-alarm repair
+D. To introduce a new equipment portal
+Đáp án: A
+Kỹ năng: PURPOSE
+Giải thích: The notice informs employees about reception closing early and how deliveries will be handled.
+Căn cứ: The east reception desk will close at 4:30 p.m. on October 7 for a scheduled fire alarm inspection.
+
+15. What should Mr. Lee do if he prefers delivery on October 9?
+A. Submit a new equipment request
+B. Reply before noon on October 4
+C. Collect the chair from the warehouse
+D. Contact Daniel Ruiz after October 7
+Đáp án: B
+Kỹ năng: DETAIL
+Giải thích: The sender asks him to reply by the stated deadline to change the date.
+Căn cứ: If October 7 does not work for you, reply to this e-mail by noon on October 4.
+
+16. What will probably happen if nobody can receive the chair on October 7?
+A. It will be left in the hallway.
+B. It will be returned and delivered on a newly arranged date.
+C. It will be moved to east reception after 4:30 p.m.
+D. The request will be permanently deleted.
+Đáp án: B
+Kỹ năng: INFERENCE
+Giải thích: The e-mail states the delivery team will take the chair back and arrange another date.
+Căn cứ: If no one is available to receive the chair, it will be taken back to the warehouse and a new delivery date will be arranged.
+
+17. What does "unattended" most nearly mean?
+A. Not watched
+B. Newly painted
+C. Fully assembled
+D. Reserved
+Đáp án: A
+Kỹ năng: VOCABULARY
+Giải thích: An unattended hallway is one where no person is present to monitor the item.
+Căn cứ: Please note that the delivery team cannot leave large items in an unattended hallway.
+
+18. What is the main purpose of the second paragraph of the e-mail?
+A. To describe where and when the chair will be delivered
+B. To explain how to request a computer
+C. To list the warehouse's business hours
+D. To ask Mr. Lee to approve a different model
+Đáp án: A
+Kỹ năng: PURPOSE
+Giải thích: The paragraph gives the delivery location, time window, and what happens if nobody is available.
+Căn cứ: The delivery team will bring the chair to the 4th-floor reception area between 1:00 and 3:00 p.m. on October 7.
+
+19. Until what time will the east reception desk be open on October 7?
+A. 1:00 p.m.
+B. 3:00 p.m.
+C. 4:30 p.m.
+D. 5:00 p.m.
+Đáp án: C
+Kỹ năng: DETAIL
+Giải thích: The service notice explicitly states the closing time.
+Căn cứ: The east reception desk will close at 4:30 p.m. on October 7 for a scheduled fire alarm inspection.
+
+20. What does "approved" most nearly mean in the service notice?
+A. Delivered to the correct floor
+B. Officially accepted
+C. Personally collected
+D. Temporarily delayed
+Đáp án: B
+Kỹ năng: VOCABULARY
+Giải thích: An approved request is one that has been officially accepted or authorized.
+Căn cứ: Large furniture deliveries will continue to the floor listed on the approved request.

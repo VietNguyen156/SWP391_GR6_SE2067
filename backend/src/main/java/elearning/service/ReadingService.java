@@ -133,6 +133,10 @@ public class ReadingService {
             q.setQuestionText(qr.questionText().trim());
             q.setExplanation(clean(qr.explanation()));
             q.setEvidence(clean(qr.evidence()));
+            q.setSkillType(
+                    qr.skillType() == null
+                            ? ReadingQuestion.SkillType.DETAIL
+                            : qr.skillType());
             q.setSortOrder(qi++);
             int oi = 1;
             for (ReadingRequest.Option or : qr.options()) {
@@ -304,6 +308,7 @@ public class ReadingService {
                                                 q.getQuestionText(),
                                                 withKey ? q.getExplanation() : null,
                                                 withKey ? q.getEvidence() : null,
+                                                q.getSkillType(),
                                                 q.getOptions().stream()
                                                         .map(
                                                                 o ->

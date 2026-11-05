@@ -383,6 +383,7 @@ export default function ReadingEditorPage({ mode: routeMode }) {
               questions={form.questions}
               onChange={(questions) => set({ questions })}
               withKey
+              withSkillType
             />
           </>
         )}

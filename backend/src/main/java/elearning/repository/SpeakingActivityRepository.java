@@ -9,6 +9,9 @@ import java.util.*;
 public interface SpeakingActivityRepository extends JpaRepository<SpeakingActivity, Long> {
     List<SpeakingActivity> findAllByCourseWeekIdOrderByUpdatedAtDesc(Long weekId);
 
+    List<SpeakingActivity> findAllByCourseWeekCourseIdInAndStatusOrderByUpdatedAtDesc(
+            Collection<Long> courseIds, SpeakingActivity.Status status);
+
     Optional<SpeakingActivity> findByIdAndTeacherId(Long id, Long teacherId);
     boolean existsByLessonId(Long lessonId);
 

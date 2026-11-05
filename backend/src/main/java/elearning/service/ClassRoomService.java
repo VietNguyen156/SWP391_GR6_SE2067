@@ -7,6 +7,8 @@ import elearning.dto.ClassroomDto.ClassRoomResponse;
 import elearning.dto.ClassroomDto.ClassStudentResponse;
 import elearning.dto.ClassroomDto.ClassSubmissionResponse;
 import elearning.dto.ClassroomDto.StudentClassProgressResponse;
+import elearning.dto.SpeakingDto.SpeakingRevisionResponse;
+import elearning.dto.SpeakingDto.SpeakingRubric;
 import elearning.entity.ClassEnrollment;
 import elearning.entity.ClassRoom;
 import elearning.entity.CourseOrder;
@@ -20,6 +22,7 @@ import elearning.entity.LessonProgress;
 import elearning.entity.ListeningActivity;
 import elearning.entity.ListeningAttempt;
 import elearning.entity.SpeakingActivity;
+import elearning.entity.SpeakingRevision;
 import elearning.entity.SpeakingSubmission;
 import elearning.entity.StudentGrammarProgress;
 import elearning.entity.StudentLearningProgress;
@@ -41,6 +44,7 @@ import elearning.repository.ListeningActivityRepository;
 import elearning.repository.ListeningAttemptRepository;
 import elearning.repository.SpeakingActivityRepository;
 import elearning.repository.SpeakingSubmissionRepository;
+import elearning.repository.SpeakingRevisionRepository;
 import elearning.repository.StudentGrammarProgressRepository;
 import elearning.repository.StudentLearningProgressRepository;
 import elearning.repository.UserRepository;
@@ -63,6 +67,7 @@ public class ClassRoomService {
     private final StudentLearningProgressRepository courseProgress;
     private final UserRepository users;
     private final SpeakingSubmissionRepository speakingSubmissions;
+    private final SpeakingRevisionRepository speakingRevisions;
     private final ListeningAttemptRepository listeningAttempts;
     private final elearning.repository.ReadingAttemptRepository readingAttempts;
     private final elearning.repository.ReadingActivityRepository readingActivities;
@@ -84,6 +89,7 @@ public class ClassRoomService {
             StudentLearningProgressRepository cp,
             UserRepository u,
             SpeakingSubmissionRepository ss,
+            SpeakingRevisionRepository sr,
             ListeningAttemptRepository la,
             elearning.repository.ReadingAttemptRepository ra,
             elearning.repository.ReadingActivityRepository rea,
@@ -103,6 +109,7 @@ public class ClassRoomService {
         courseProgress = cp;
         users = u;
         speakingSubmissions = ss;
+        speakingRevisions = sr;
         listeningAttempts = la;
         readingAttempts = ra;
         readingActivities = rea;
@@ -178,10 +185,27 @@ public class ClassRoomService {
         List<Long> studentIds = active.stream().map(e -> e.getStudent().getId()).toList();
         if (studentIds.isEmpty()) return List.of();
         List<ClassSubmissionResponse> rows = new ArrayList<>();
-        for (SpeakingSubmission s :
+        List<SpeakingSubmission> speakingRows =
                 speakingSubmissions
                         .findAllByActivityCourseWeekCourseIdAndStudentIdInOrderBySubmittedAtDesc(
-                                room.getCourse().getId(), studentIds)) {
+                                room.getCourse().getId(), studentIds);
+        Map<Long, List<SpeakingRevisionResponse>> revisionsBySubmission = new HashMap<>();
+        if (!speakingRows.isEmpty()) {
+            List<Long> submissionIds = speakingRows.stream().map(SpeakingSubmission::getId).toList();
+            for (SpeakingRevision revision :
+                    speakingRevisions
+                            .findAllBySubmissionIdInOrderBySubmissionIdAscRevisionNumberDesc(
+                                    submissionIds)) {
+                revisionsBySubmission
+                        .computeIfAbsent(revision.getSubmission().getId(), ignored -> new ArrayList<>())
+                        .add(
+                                new SpeakingRevisionResponse(
+                                        revision.getId(),
+                                        revision.getRevisionNumber(),
+                                        revision.getSubmittedAt()));
+            }
+        }
+        for (SpeakingSubmission s : speakingRows) {
             User st = s.getStudent();
             rows.add(
                     new ClassSubmissionResponse(
@@ -196,7 +220,10 @@ public class ClassRoomService {
                             s.getScore(),
                             s.getFeedback(),
                             s.getSubmittedAt(),
-                            s.getRecordingUrl()));
+                            s.getRecordingUrl(),
+                            s.getRevisionNumber(),
+                            speakingRubric(s),
+                            revisionsBySubmission.getOrDefault(s.getId(), List.of())));
         }
         for (ListeningAttempt a :
                 listeningAttempts
@@ -216,12 +243,17 @@ public class ClassRoomService {
                             a.getScore(),
                             null,
                             a.getSubmittedAt(),
-                            null));
+                            null,
+                            null,
+                            null,
+                            List.of()));
         }
         for (elearning.entity.ReadingAttempt a :
                 readingAttempts
-                        .findAllByActivityCourseWeekCourseIdAndStudentIdInOrderBySubmittedAtDesc(
-                                room.getCourse().getId(), studentIds)) {
+                        .findAllByActivityCourseWeekCourseIdAndStudentIdInAndTypeOrderBySubmittedAtDesc(
+                                room.getCourse().getId(),
+                                studentIds,
+                                elearning.entity.ReadingAttempt.Type.ASSESSMENT)) {
             User st = a.getStudent();
             rows.add(
                     new ClassSubmissionResponse(
@@ -236,13 +268,34 @@ public class ClassRoomService {
                             a.getScore(),
                             null,
                             a.getSubmittedAt(),
-                            null));
+                            null,
+                            null,
+                            null,
+                            List.of()));
         }
         rows.sort(
                 Comparator.comparing(
                         ClassSubmissionResponse::submittedAt,
                         Comparator.nullsLast(Comparator.reverseOrder())));
         return rows;
+    }
+
+    private SpeakingRubric speakingRubric(SpeakingSubmission submission) {
+        if (submission.getTaskCompletionScore() == null
+                && submission.getFluencyScore() == null
+                && submission.getPronunciationScore() == null
+                && submission.getVocabularyGrammarScore() == null) {
+            return null;
+        }
+        return new SpeakingRubric(
+                submission.getTaskCompletionScore(),
+                submission.getTaskCompletionFeedback(),
+                submission.getFluencyScore(),
+                submission.getFluencyFeedback(),
+                submission.getPronunciationScore(),
+                submission.getPronunciationFeedback(),
+                submission.getVocabularyGrammarScore(),
+                submission.getVocabularyGrammarFeedback());
     }
 
     public ClassRoomResponse join(String email, Long id) {
@@ -421,8 +474,10 @@ public class ClassRoomService {
         LinkedHashMap<Long, elearning.entity.ReadingAttempt> readingLatest = new LinkedHashMap<>();
         for (elearning.entity.ReadingAttempt a :
                 readingAttempts
-                        .findAllByActivityCourseWeekCourseIdAndStudentIdInOrderBySubmittedAtDesc(
-                                courseId, List.of(studentId)))
+                        .findAllByActivityCourseWeekCourseIdAndStudentIdInAndTypeOrderBySubmittedAtDesc(
+                                courseId,
+                                List.of(studentId),
+                                elearning.entity.ReadingAttempt.Type.ASSESSMENT))
             readingLatest.putIfAbsent(a.getActivity().getId(), a);
         LinkedHashMap<Long, SpeakingSubmission> speakingLatest = new LinkedHashMap<>();
         for (SpeakingSubmission a :

@@ -47,6 +47,33 @@ public class SpeakingSubmission {
     @JoinColumn(name = "graded_by_teacher_id")
     private User gradedBy;
 
+    @Column(name = "revision_number", nullable = false)
+    private Integer revisionNumber = 1;
+
+    @Column(name = "task_completion_score", precision = 5, scale = 2)
+    private BigDecimal taskCompletionScore;
+
+    @Column(name = "task_completion_feedback", columnDefinition = "TEXT")
+    private String taskCompletionFeedback;
+
+    @Column(name = "fluency_score", precision = 5, scale = 2)
+    private BigDecimal fluencyScore;
+
+    @Column(name = "fluency_feedback", columnDefinition = "TEXT")
+    private String fluencyFeedback;
+
+    @Column(name = "pronunciation_score", precision = 5, scale = 2)
+    private BigDecimal pronunciationScore;
+
+    @Column(name = "pronunciation_feedback", columnDefinition = "TEXT")
+    private String pronunciationFeedback;
+
+    @Column(name = "vocabulary_grammar_score", precision = 5, scale = 2)
+    private BigDecimal vocabularyGrammarScore;
+
+    @Column(name = "vocabulary_grammar_feedback", columnDefinition = "TEXT")
+    private String vocabularyGrammarFeedback;
+
     @PrePersist
     void pre() {
         if (submittedAt == null) submittedAt = LocalDateTime.now();
@@ -126,5 +153,77 @@ public class SpeakingSubmission {
 
     public void setGradedBy(User v) {
         gradedBy = v;
+    }
+
+    public Integer getRevisionNumber() {
+        return revisionNumber;
+    }
+
+    public void setRevisionNumber(Integer v) {
+        revisionNumber = v;
+    }
+
+    public BigDecimal getTaskCompletionScore() {
+        return taskCompletionScore;
+    }
+
+    public void setTaskCompletionScore(BigDecimal v) {
+        taskCompletionScore = v;
+    }
+
+    public String getTaskCompletionFeedback() {
+        return taskCompletionFeedback;
+    }
+
+    public void setTaskCompletionFeedback(String v) {
+        taskCompletionFeedback = v;
+    }
+
+    public BigDecimal getFluencyScore() {
+        return fluencyScore;
+    }
+
+    public void setFluencyScore(BigDecimal v) {
+        fluencyScore = v;
+    }
+
+    public String getFluencyFeedback() {
+        return fluencyFeedback;
+    }
+
+    public void setFluencyFeedback(String v) {
+        fluencyFeedback = v;
+    }
+
+    public BigDecimal getPronunciationScore() {
+        return pronunciationScore;
+    }
+
+    public void setPronunciationScore(BigDecimal v) {
+        pronunciationScore = v;
+    }
+
+    public String getPronunciationFeedback() {
+        return pronunciationFeedback;
+    }
+
+    public void setPronunciationFeedback(String v) {
+        pronunciationFeedback = v;
+    }
+
+    public BigDecimal getVocabularyGrammarScore() {
+        return vocabularyGrammarScore;
+    }
+
+    public void setVocabularyGrammarScore(BigDecimal v) {
+        vocabularyGrammarScore = v;
+    }
+
+    public String getVocabularyGrammarFeedback() {
+        return vocabularyGrammarFeedback;
+    }
+
+    public void setVocabularyGrammarFeedback(String v) {
+        vocabularyGrammarFeedback = v;
     }
 }

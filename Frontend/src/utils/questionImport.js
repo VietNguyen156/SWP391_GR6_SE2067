@@ -8,6 +8,7 @@
 //   C. At 10:00 a.m.
 //   D. At 11:00 a.m.
 //   Đáp án: B
+//   Kỹ năng: VOCABULARY      (tùy chọn: DETAIL/INFERENCE/VOCABULARY/PURPOSE)
 //   Giải thích: ...            (tùy chọn)
 //   Căn cứ: ...                (tùy chọn, Reading)
 //
@@ -22,6 +23,7 @@ const ANSWER =
   /^(?:đáp án(?: đúng)?|dap an(?: dung)?|answer|key)\s*[:：]\s*\(?([A-Za-z])\)?\.?\s*$/i;
 const EXPLAIN = /^(?:giải thích|giai thich|explanation)\s*[:：]\s*(.*)$/i;
 const EVIDENCE = /^(?:căn cứ|can cu|evidence)\s*[:：]\s*(.*)$/i;
+const SKILL = /^(?:kỹ năng|ky nang|skill)\s*[:：]\s*(DETAIL|INFERENCE|VOCABULARY|PURPOSE)\s*$/i;
 const STAR = /\s*\*\s*$/;
 
 /** Bỏ BOM, đổi xuống dòng Windows; trả về mảng [số dòng, nội dung đã trim]. */
@@ -52,7 +54,15 @@ export function parseMcqText(text, { minOptions = 2, maxOptions = 4 } = {}) {
     }
     const qm = line.match(QUESTION);
     if (qm) {
-      cur = { line: no, text: qm[2], options: [], answer: null, explanation: "", evidence: "" };
+      cur = {
+        line: no,
+        text: qm[2],
+        options: [],
+        answer: null,
+        explanation: "",
+        evidence: "",
+        skillType: null,
+      };
       drafts.push(cur);
       last = "question";
       continue;
@@ -62,6 +72,12 @@ export function parseMcqText(text, { minOptions = 2, maxOptions = 4 } = {}) {
         line: no,
         message: `Chưa có câu hỏi. Dòng câu hỏi phải bắt đầu bằng số, ví dụ "1. ..."`,
       });
+      continue;
+    }
+    const sm = line.match(SKILL);
+    if (sm) {
+      cur.skillType = sm[1].toUpperCase();
+      last = null;
       continue;
     }
     const om = line.match(OPTION);
@@ -133,6 +149,7 @@ export function parseMcqText(text, { minOptions = 2, maxOptions = 4 } = {}) {
       questionText: d.text.trim(),
       explanation: d.explanation.trim(),
       evidence: d.evidence.trim(),
+      ...(d.skillType ? { skillType: d.skillType } : {}),
       options: d.options.map((o) => ({ optionText: o.text.trim(), correct: o.key === key })),
     });
   });

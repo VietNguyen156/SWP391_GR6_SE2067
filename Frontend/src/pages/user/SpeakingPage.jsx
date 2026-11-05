@@ -3,7 +3,7 @@ import Icon from "../../components/common/Icon";
 import { formatDateTime, formatNumber } from "../../utils/format";
 import { useSuccessToast } from "../../components/common/Toast";
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import ErrorState from "../../components/common/ErrorState";
 import MaterialShell from "../../components/learning/MaterialShell";
 import { speakingApi } from "../../services/learningContentService";
@@ -23,8 +23,18 @@ function formatDuration(seconds) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+const RUBRIC_ITEMS = [
+  ["taskCompletionScore", "taskCompletionFeedback", "Hoàn thành yêu cầu", 30],
+  ["fluencyScore", "fluencyFeedback", "Độ lưu loát", 25],
+  ["pronunciationScore", "pronunciationFeedback", "Phát âm", 25],
+  ["vocabularyGrammarScore", "vocabularyGrammarFeedback", "Từ vựng & ngữ pháp", 20],
+];
+
 export default function SpeakingPage() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const practiceMode = searchParams.get("practice") === "1";
+  const practiceCriterion = searchParams.get("criterion");
   const recorderRef = useRef(null);
   const chunksRef = useRef([]);
   const streamRef = useRef(null);
@@ -54,7 +64,10 @@ export default function SpeakingPage() {
     setRecordingSeconds(0);
     setState({ error: "", message: "", working: false });
 
-    Promise.all([speakingApi.studentGet(id), speakingApi.studentSubmission(id)])
+    Promise.all([
+      speakingApi.studentGet(id),
+      practiceMode ? Promise.resolve(null) : speakingApi.studentSubmission(id),
+    ])
       .then(([activity, submitted]) => {
         if (!mounted) return;
         setData(activity);
@@ -80,7 +93,7 @@ export default function SpeakingPage() {
       playerRef.current?.pause();
       if (playerRef.current) URL.revokeObjectURL(playerRef.current.src);
     };
-  }, [id]);
+  }, [id, practiceMode]);
 
   async function start() {
     if (startingRef.current || uploadingRef.current || recording) return;
@@ -214,7 +227,7 @@ export default function SpeakingPage() {
     );
   }
 
-  const graded = submission?.status === "GRADED";
+  const graded = !practiceMode && submission?.status === "GRADED";
 
   return (
     <MaterialShell
@@ -226,6 +239,22 @@ export default function SpeakingPage() {
       showPager={false}
     >
       <main className="container py-4 content-shell sp-container">
+        {practiceMode && (
+          <section className="student-speaking-practice-note mb-4">
+            <div>
+              <strong>
+                Chế độ tự luyện · {practiceCriterion?.replaceAll("_", " ") || "Speaking"}
+              </strong>
+              <span>
+                Bản ghi chỉ tồn tại trong phiên trình duyệt này; không gửi lên giáo viên và không
+                thay đổi điểm bài đã chấm.
+              </span>
+            </div>
+            <Link className="btn btn-outline-primary btn-sm" to="/practice">
+              Kế hoạch ôn tập
+            </Link>
+          </section>
+        )}
         {/* Đề bài & hướng dẫn */}
         <div className="ui-card p-4 mb-4">
           <div className="sp-header-row">
@@ -252,7 +281,7 @@ export default function SpeakingPage() {
         </div>
 
         {/* Khối nhận xét & điểm số nếu giáo viên đã chấm */}
-        {graded && (
+        {!practiceMode && graded && (
           <section className="sp-graded-card mb-4">
             <div className="sp-graded-head">
               <div className="sp-score-badge">
@@ -277,6 +306,30 @@ export default function SpeakingPage() {
               </p>
             </div>
 
+            {submission.rubric && (
+              <div className="mt-3">
+                <h3 className="h6">Barem chấm điểm theo tiêu chí</h3>
+                <ul className="list-group">
+                  {RUBRIC_ITEMS.map(([scoreKey, feedbackKey, label, weight]) => (
+                    <li
+                      className="list-group-item d-flex justify-content-between gap-3"
+                      key={scoreKey}
+                    >
+                      <span>
+                        <strong>{label}</strong> ({weight}%)
+                        {submission.rubric[feedbackKey] && (
+                          <small className="d-block text-muted">
+                            {submission.rubric[feedbackKey]}
+                          </small>
+                        )}
+                      </span>
+                      <strong>{formatNumber(submission.rubric[scoreKey] || 0)}/100</strong>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div className="mt-3">
               <span className="text-muted small d-block mb-1">Bản ghi âm đã nộp:</span>
               <AudioPlayer endpoint={`/speaking/submissions/${submission.id}/audio`} />
@@ -285,12 +338,14 @@ export default function SpeakingPage() {
         )}
 
         {/* Bài đã nộp nhưng đang chờ chấm */}
-        {submission && !graded && (
+        {!practiceMode && submission && !graded && (
           <section className="sp-submitted-waiting-card mb-4">
             <div className="d-flex align-items-center justify-content-between mb-3">
               <div className="d-flex align-items-center gap-2">
                 <Icon name="clock" size={18} />
-                <strong>Bài đã nộp – Đang chờ giáo viên chấm</strong>
+                <strong>
+                  Bản ghi #{submission.revisionNumber || 1} đã nộp – Đang chờ giáo viên chấm
+                </strong>
               </div>
               <time className="text-muted small">{formatDateTime(submission.submittedAt)}</time>
             </div>
@@ -298,11 +353,40 @@ export default function SpeakingPage() {
           </section>
         )}
 
+        {!practiceMode &&
+          submission?.revisions?.filter(
+            (revision) => revision.revisionNumber !== submission.revisionNumber,
+          ).length > 0 && (
+            <section className="sp-submitted-waiting-card mb-4">
+              <h2 className="h6">Lịch sử các bản ghi đã nộp</h2>
+              <p className="small text-muted">
+                Các phiên bản cũ được giữ lại để bạn và giáo viên đối chiếu tiến bộ; bản mới nhất là
+                phiên bản đang chờ chấm.
+              </p>
+              {submission.revisions
+                .filter((revision) => revision.revisionNumber !== submission.revisionNumber)
+                .map((revision) => (
+                  <div className="mb-3" key={revision.id}>
+                    <strong>
+                      Bản ghi #{revision.revisionNumber} · {formatDateTime(revision.submittedAt)}
+                    </strong>
+                    <AudioPlayer
+                      endpoint={`/speaking/submissions/${submission.id}/revisions/${revision.id}/audio`}
+                    />
+                  </div>
+                ))}
+            </section>
+          )}
+
         {/* Khung ghi âm nếu chưa nộp hoặc muốn nộp lại (chưa chấm) */}
         {!graded && (
           <section className="sp-recorder-card text-center p-4">
             <h2 className="sp-recorder-heading">
-              {submission ? "Ghi âm bài nói mới (nộp lại)" : "Ghi âm bài nói của bạn"}
+              {practiceMode
+                ? "Ghi âm tự luyện"
+                : submission
+                  ? "Ghi âm bài nói mới (nộp lại)"
+                  : "Ghi âm bài nói của bạn"}
             </h2>
 
             {/* Trạng thái 1: Chưa ghi âm */}
@@ -337,7 +421,7 @@ export default function SpeakingPage() {
               </div>
             )}
 
-            {/* Trạng thái 3: Đã ghi âm xong, sẵn sàng nghe lại & nộp */}
+            {/* Trạng thái 3: Đã ghi âm xong, sẵn sàng nghe lại hoặc nộp */}
             {!recording && audio && (
               <div className="sp-record-state is-finished py-3">
                 <div className="sp-audio-ready-badge mb-3">
@@ -366,18 +450,25 @@ export default function SpeakingPage() {
                   </button>
                 </div>
 
-                <button
-                  type="button"
-                  className="btn btn-primary btn-lg px-4"
-                  disabled={state.working || starting || recording}
-                  onClick={submit}
-                >
-                  {state.working
-                    ? "Đang tải lên & nộp…"
-                    : submission
-                      ? "Nộp lại bài này"
-                      : "Nộp bài ghi âm"}
-                </button>
+                {practiceMode ? (
+                  <p className="student-speaking-practice-local-note mb-0">
+                    Bản ghi tự luyện chưa được lưu hoặc nộp. Bạn có thể ghi lại để tự nghe và đối
+                    chiếu.
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-lg px-4"
+                    disabled={state.working || starting || recording}
+                    onClick={submit}
+                  >
+                    {state.working
+                      ? "Đang tải lên & nộp…"
+                      : submission
+                        ? "Nộp lại bài này"
+                        : "Nộp bài ghi âm"}
+                  </button>
+                )}
               </div>
             )}
 

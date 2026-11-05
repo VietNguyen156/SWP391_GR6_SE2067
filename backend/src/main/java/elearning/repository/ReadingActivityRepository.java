@@ -15,6 +15,9 @@ import java.util.Optional;
 public interface ReadingActivityRepository extends JpaRepository<ReadingActivity, Long> {
     List<ReadingActivity> findAllByTeacherIdOrderByUpdatedAtDesc(Long teacherId);
 
+    List<ReadingActivity> findAllByCourseWeekCourseIdInAndStatusOrderByUpdatedAtDesc(
+            java.util.Collection<Long> courseIds, ReadingActivity.Status status);
+
     boolean existsByLessonId(Long lessonId);
 
     List<ReadingActivity> findAllByLessonIdOrderByCreatedAtAsc(Long lessonId);

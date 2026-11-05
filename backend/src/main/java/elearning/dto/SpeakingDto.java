@@ -5,6 +5,7 @@ import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public final class SpeakingDto {
     private SpeakingDto() {}
@@ -39,5 +40,21 @@ public final class SpeakingDto {
             BigDecimal score,
             String feedback,
             LocalDateTime submittedAt,
-            LocalDateTime gradedAt) {}
+            LocalDateTime gradedAt,
+            Integer revisionNumber,
+            SpeakingRubric rubric,
+            List<SpeakingRevisionResponse> revisions) {}
+
+    public record SpeakingRubric(
+            @NotNull @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal taskCompletionScore,
+            @Size(max = 65535) String taskCompletionFeedback,
+            @NotNull @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal fluencyScore,
+            @Size(max = 65535) String fluencyFeedback,
+            @NotNull @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal pronunciationScore,
+            @Size(max = 65535) String pronunciationFeedback,
+            @NotNull @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal vocabularyGrammarScore,
+            @Size(max = 65535) String vocabularyGrammarFeedback) {}
+
+    public record SpeakingRevisionResponse(
+            Long id, Integer revisionNumber, LocalDateTime submittedAt) {}
 }

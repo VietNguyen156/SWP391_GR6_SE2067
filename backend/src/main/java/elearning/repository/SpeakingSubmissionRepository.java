@@ -11,6 +11,12 @@ public interface SpeakingSubmissionRepository extends JpaRepository<SpeakingSubm
 
     Optional<SpeakingSubmission> findByActivityIdAndStudentId(Long activityId, Long studentId);
 
+    List<SpeakingSubmission>
+            findAllByStudentIdAndActivityCourseWeekCourseIdInAndStatusOrderBySubmittedAtDesc(
+                    Long studentId,
+                    Collection<Long> courseIds,
+                    SpeakingSubmission.Status status);
+
     boolean existsByActivityId(Long activityId);
 
     long countByActivityId(Long activityId);

@@ -1,6 +1,8 @@
 package elearning.dto;
 
 import elearning.entity.ClassRoom;
+import elearning.dto.SpeakingDto.SpeakingRevisionResponse;
+import elearning.dto.SpeakingDto.SpeakingRubric;
 
 import jakarta.validation.constraints.*;
 
@@ -75,7 +77,10 @@ public final class ClassroomDto {
             BigDecimal score,
             String feedback,
             LocalDateTime submittedAt,
-            String recordingUrl) {}
+            String recordingUrl,
+            Integer revisionNumber,
+            SpeakingRubric rubric,
+            List<SpeakingRevisionResponse> revisions) {}
 
     public record StudentClassProgressResponse(
             Long classId,
