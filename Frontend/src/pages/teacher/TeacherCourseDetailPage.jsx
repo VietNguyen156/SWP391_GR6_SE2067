@@ -6,12 +6,13 @@ import VisibilitySwitch from "../../components/common/VisibilitySwitch";
 import { useConfirm } from "../../components/common/ConfirmDialog";
 import Dropdown from "../../components/course/Dropdown";
 import EmptyArt from "../../components/course/EmptyArt";
+import { classroomApi } from "../../services/classroomService";
 import { courseToForm, coursePayload, levelLabel } from "../../components/course/courseFormModel";
 import * as courseApi from "../../services/courseService";
 import { formatMoney } from "../../utils/format";
 import { rememberLastCourse } from "../../utils/lastCourse";
 import { teacherWeekLink } from "../../utils/lessonMaterials";
-import { contentStatusLabel } from "../../utils/statusLabels";
+import { classStatusLabel, contentStatusLabel } from "../../utils/statusLabels";
 
 // Trang khóa học (cấp 1/3): thông tin khóa + lưới tuần. Tuần → trang tuần; bài → trang bài học.
 export default function TeacherCourseDetailPage() {
@@ -21,17 +22,20 @@ export default function TeacherCourseDetailPage() {
   const [params] = useSearchParams();
   const [course, setCourse] = useState(null);
   const [weeks, setWeeks] = useState([]);
+  const [classes, setClasses] = useState([]);
   const [loadError, setLoadError] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function load() {
-    const [courseData, weekData] = await Promise.all([
+    const [courseData, weekData, classData] = await Promise.all([
       courseApi.getTeacherCourse(id),
       courseApi.getTeacherCurriculum(id),
+      classroomApi.teacherList(),
     ]);
     setCourse(courseData);
     setWeeks(weekData);
+    setClasses(classData.filter((classroom) => String(classroom.courseId) === String(id)));
   }
 
   useEffect(() => {
@@ -167,6 +171,66 @@ export default function TeacherCourseDetailPage() {
           />
         </div>
       )}
+
+      <section className="tc-class-panel" aria-labelledby="tc-class-title">
+        <div className="tc-class-panel-head">
+          <div>
+            <h2 id="tc-class-title">Các lớp thuộc khóa học</h2>
+            <p>{classes.length} lớp · Mỗi lớp có danh sách học viên và bài nộp riêng.</p>
+          </div>
+          <Link
+            className="btn btn-primary"
+            to={`/teacher/classes/new?courseId=${id}&returnTo=${encodeURIComponent(`/teacher/courses/${id}`)}`}
+          >
+            <Icon name="plus" size={17} />
+            Tạo lớp
+          </Link>
+        </div>
+        {classes.length ? (
+          <div className="tc-class-list">
+            {classes.map((classroom) => (
+              <article className="tc-class-card" key={classroom.id}>
+                <div className="tc-class-card-main">
+                  <div className="tc-class-card-title">
+                    <Link to={`/teacher/classes/${classroom.id}`}>{classroom.className}</Link>
+                    <span className={`class-status ${String(classroom.status).toLowerCase()}`}>
+                      {classStatusLabel(classroom.status)}
+                    </span>
+                  </div>
+                  <p>
+                    Mã lớp: {classroom.classCode}
+                    {classroom.startDate && ` · Bắt đầu ${classroom.startDate}`}
+                    {classroom.endDate && ` · Kết thúc ${classroom.endDate}`}
+                  </p>
+                </div>
+                <div className="tc-class-card-students">
+                  <strong>{classroom.studentCount}</strong>
+                  <span>{classroom.maxStudents ? `/ ${classroom.maxStudents}` : ""} học viên</span>
+                </div>
+                <div className="tc-class-card-actions">
+                  <Link
+                    className="btn btn-outline-primary btn-sm"
+                    to={`/teacher/classes/${classroom.id}`}
+                  >
+                    Chi tiết lớp
+                  </Link>
+                  <Link
+                    className="btn btn-outline-secondary btn-sm"
+                    to={`/teacher/classes/${classroom.id}/edit?returnTo=${encodeURIComponent(`/teacher/courses/${id}`)}`}
+                  >
+                    Sửa
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="tc-class-empty">
+            <strong>Khóa học chưa có lớp nào</strong>
+            <p>Tạo lớp đầu tiên. Bạn có thể mở nhiều lớp cho cùng một khóa học.</p>
+          </div>
+        )}
+      </section>
 
       <WeekGrid courseId={id} weeks={weeks} onAdd={addWeek} busy={busy} />
       <section className="card p-3 p-md-4 mt-4">
