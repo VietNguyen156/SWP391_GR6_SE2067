@@ -161,7 +161,16 @@ public class ProgressService {
                 rows.stream().map(this::summary).toList());
     }
 
+    /** Đã có học viên bắt đầu học bài nào của tuần này chưa. */
     @Transactional(readOnly = true)
+    public boolean hasLearners(Long weekId) {
+        return Boolean.TRUE.equals(
+                db.queryForObject(
+                        "SELECT EXISTS(SELECT 1 FROM lesson_progress lp JOIN lessons l ON l.id=lp.lesson_id"
+                                + " WHERE l.course_week_id=?)",
+                        Boolean.class, weekId));
+    }
+
     public LessonProgressSummary courseProgress(String email, Long courseId) {
         User student = student(email);
         Course course =
@@ -174,7 +183,8 @@ public class ProgressService {
             return new LessonProgressSummary(
                     courseId, course.getTitle(), 0, total, total, BigDecimal.ZERO, null);
         }
-        return summary(row);
+        // Tính lại để giáo viên thêm/bớt bài thì % hiện đúng ngay.
+        return summary(syncCourse(student, row.getCourse(), null));
     }
 
     @Transactional(readOnly = true)
@@ -226,8 +236,13 @@ public class ProgressService {
         int total = visibleLessonCount(course.getId());
         int completed =
                 (int)
-                        lessonProgress.countByStudentIdAndLessonCourseWeekCourseIdAndStatus(
-                                student.getId(), course.getId(), LessonProgress.Status.COMPLETED);
+                        lessonProgress
+                                .countByStudentIdAndLessonCourseWeekCourseIdAndStatusAndLessonStatusAndLessonCourseWeekStatus(
+                                        student.getId(),
+                                        course.getId(),
+                                        LessonProgress.Status.COMPLETED,
+                                        Lesson.Status.PUBLISHED,
+                                        CourseWeek.Status.PUBLISHED);
         StudentLearningProgress row =
                 courseProgress
                         .findByStudentIdAndCourseId(student.getId(), course.getId())

@@ -374,6 +374,7 @@ public class FinalTestService {
         boolean eligible = eligible(courseId, studentId);
         List<Map<String, Object>> attempts = rows("SELECT id,status,started_at,expires_at,submitted_at,earned_points,total_points,passed FROM test_attempts WHERE test_id=? AND version_id=? AND student_id=? LIMIT 1", id(test), test.get("version_id"), studentId);
         return Map.of("exists", true, "id", id(test), "title", test.get("title"), "eligible", eligible,
+                "contentPending", contentPending(courseId),
                 "timeLimitMinutes", test.get("time_limit_minutes"), "totalPoints", test.get("total_points"),
                 "attempt", attempts.isEmpty() ? Map.of() : attempts.get(0));
     }
@@ -382,9 +383,15 @@ public class FinalTestService {
         return rows("SELECT a.id,a.status,a.started_at,a.submitted_at,a.earned_points,a.total_points,a.passed,t.course_id,t.title FROM test_attempts a JOIN course_tests t ON t.id=a.test_id WHERE a.student_id=? ORDER BY a.started_at DESC", user(email));
     }
 
+    /** Còn tuần ẩn/nháp tức khóa chưa mở đủ nội dung: chưa cho thi. */
+    private boolean contentPending(long courseId) {
+        return db.queryForObject("SELECT COUNT(*) FROM course_weeks WHERE course_id=? AND status<>'PUBLISHED'", Integer.class, courseId) > 0;
+    }
+
     private boolean eligible(long courseId, long studentId) {
         boolean enrolled = !rows("SELECT e.id FROM class_enrollments e JOIN classes c ON c.id=e.class_id WHERE c.course_id=? AND e.student_id=? AND e.status IN ('ACTIVE','COMPLETED') LIMIT 1", courseId, studentId).isEmpty();
         if (!enrolled) return false;
+        if (contentPending(courseId)) return false;
         int missing = db.queryForObject("SELECT COUNT(*) FROM lessons l JOIN course_weeks w ON w.id=l.course_week_id LEFT JOIN lesson_progress p ON p.lesson_id=l.id AND p.student_id=? WHERE w.course_id=? AND w.status='PUBLISHED' AND l.status='PUBLISHED' AND (p.id IS NULL OR p.status<>'COMPLETED')", Integer.class, studentId, courseId);
         return missing == 0;
     }
@@ -497,7 +504,10 @@ public class FinalTestService {
                 db.update("UPDATE test_answers SET is_correct=? WHERE attempt_id=? AND section_id=? AND question_key=?", hit, attemptId, sectionId, q.get("key"));
             }
             BigDecimal max = decimal(section.get("max_points"));
-            BigDecimal earned = max.multiply(BigDecimal.valueOf(correct)).divide(BigDecimal.valueOf(questions.size()), 2, RoundingMode.HALF_UP);
+            // Phần không có câu hỏi thì không có điểm (tránh chia cho 0).
+            BigDecimal earned = questions.isEmpty()
+                    ? BigDecimal.ZERO
+                    : max.multiply(BigDecimal.valueOf(correct)).divide(BigDecimal.valueOf(questions.size()), 2, RoundingMode.HALF_UP);
             totalEarned = totalEarned.add(earned);
             db.update("INSERT INTO test_section_scores(attempt_id,section_id,earned_points,max_points,graded_at) VALUES (?,?,?,?,NOW())", attemptId, sectionId, earned, max);
         }
