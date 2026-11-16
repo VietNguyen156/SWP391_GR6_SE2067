@@ -211,6 +211,9 @@ export default function OrderPage() {
 function TransferPanel({ order, busy, onReport, onCancel }) {
   const toast = useToast();
   const [qrFailed, setQrFailed] = useState(false);
+  // QR động (có sẵn số tiền, nội dung); nếu không tải được thì dùng ảnh QR tĩnh.
+  const [dynamicFailed, setDynamicFailed] = useState(false);
+  const dynamicQr = Boolean(order.qrImageUrl) && !dynamicFailed;
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -243,20 +246,27 @@ function TransferPanel({ order, busy, onReport, onCancel }) {
   return (
     <section className="od-transfer">
       <div className="od-card od-qr">
-        {order.qrImageUrl && !qrFailed ? (
+        {!qrFailed ? (
           <img
-            src={order.qrImageUrl}
+            src={dynamicQr ? order.qrImageUrl : "/payment-qr.png"}
             alt={`Mã QR chuyển ${formatMoney(order.amount)} cho đơn ${order.orderCode}`}
             width="280"
-            height="280"
-            onError={() => setQrFailed(true)}
+            onError={() => (dynamicQr ? setDynamicFailed(true) : setQrFailed(true))}
           />
         ) : (
           <p className="od-qr-fallback">
             Không tải được mã QR. Hãy chuyển khoản thủ công theo thông tin bên cạnh.
           </p>
         )}
-        <p>Mở ứng dụng ngân hàng và quét mã. Số tiền và nội dung đã được điền sẵn.</p>
+        {dynamicQr ? (
+          <p>Mở ứng dụng ngân hàng và quét mã. Số tiền và nội dung đã được điền sẵn.</p>
+        ) : (
+          <p>
+            Mở ứng dụng ngân hàng và quét mã, rồi tự nhập số tiền{" "}
+            <strong>{formatMoney(order.amount)}</strong> và nội dung{" "}
+            <strong>{order.transferContent}</strong>.
+          </p>
+        )}
         <p className={`od-countdown ${left ? "" : "is-over"}`}>
           {left ? (
             <>
@@ -269,7 +279,7 @@ function TransferPanel({ order, busy, onReport, onCancel }) {
         </p>
       </div>
 
-      <div className="od-card">
+      <div className="od-card od-info">
         <h2>Thông tin chuyển khoản</h2>
         <dl className="od-fields">
           {fields.map((field) => (
