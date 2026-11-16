@@ -3,6 +3,7 @@ import AudioPlayer from "../common/AudioPlayer";
 import Icon from "../common/Icon";
 import AttachmentList from "../grammar/AttachmentList";
 import GrammarContents from "../grammar/GrammarContents";
+import GrammarExerciseManager from "../grammar/GrammarExerciseManager";
 import Passage from "../reading/Passage";
 import { readingApi, speakingApi } from "../../services/learningContentService";
 import { readingKind } from "../../utils/lessonMaterials";
@@ -32,6 +33,7 @@ export function GrammarPreview({ item }) {
       {item.description && <p className="mv-lead pre-line">{item.description}</p>}
       <GrammarContents contents={item.contents} />
       {empty && <Empty>Chủ đề chưa có nội dung giải thích hay tài liệu.</Empty>}
+      <GrammarExerciseManager topicId={item.id} />
     </>
   );
 }

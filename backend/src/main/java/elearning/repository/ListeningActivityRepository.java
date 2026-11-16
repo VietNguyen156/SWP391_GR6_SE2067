@@ -4,6 +4,7 @@ import elearning.entity.ListeningActivity;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.*;
 
 public interface ListeningActivityRepository extends JpaRepository<ListeningActivity, Long> {
@@ -15,5 +16,8 @@ public interface ListeningActivityRepository extends JpaRepository<ListeningActi
     boolean existsByLessonId(Long lessonId);
 
     List<ListeningActivity> findAllByLessonIdOrderByCreatedAtAsc(Long lessonId);
+
+    List<ListeningActivity> findAllByCourseWeekCourseIdInAndStatusOrderByUpdatedAtDesc(
+            Collection<Long> courseIds, ListeningActivity.Status status);
 
 }

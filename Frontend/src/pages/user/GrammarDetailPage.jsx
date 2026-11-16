@@ -5,6 +5,7 @@ import { useParams } from "react-router-dom";
 import ErrorState from "../../components/common/ErrorState";
 import MaterialShell from "../../components/learning/MaterialShell";
 import GrammarContents from "../../components/grammar/GrammarContents";
+import GrammarExercises from "../../components/grammar/GrammarExercises";
 import { grammarApi } from "../../services/learningContentService";
 import { apiError } from "../../utils/apiError";
 
@@ -14,6 +15,8 @@ export default function GrammarDetailPage() {
   const { id } = useParams();
   const [topic, setTopic] = useState(null);
   const [state, setState] = useState({ loading: true, working: false, error: "", message: "" });
+  // Chủ đề có bài tập thì hoàn thành bằng cách đạt ngưỡng bài tập, không đánh dấu thủ công.
+  const [exerciseInfo, setExerciseInfo] = useState({ count: 0, passScore: 70 });
   useSuccessToast(state.message);
 
   function load() {
@@ -66,19 +69,33 @@ export default function GrammarDetailPage() {
         {!topic.contents.length && (
           <div className="empty-content">Nội dung đang được cập nhật.</div>
         )}
+        <GrammarExercises
+          topicId={topic.id}
+          onInfo={setExerciseInfo}
+          onPassed={() => {
+            setTopic((t) => ({ ...t, progressStatus: "COMPLETED", progressPercent: 100 }));
+            setState((s) => ({ ...s, message: "Đã hoàn thành chủ đề ngữ pháp" }));
+          }}
+        />
         {state.error && <div className="alert alert-danger mt-3">{state.error}</div>}
         <div className="text-end mt-4">
-          <button
-            className="btn btn-success btn-lg"
-            onClick={complete}
-            disabled={state.working || topic.progressStatus === "COMPLETED"}
-          >
-            {topic.progressStatus === "COMPLETED"
-              ? "Đã hoàn thành"
-              : state.working
-                ? "Đang lưu…"
-                : "Đánh dấu hoàn thành"}
-          </button>
+          {exerciseInfo.count > 0 && topic.progressStatus !== "COMPLETED" ? (
+            <span className="text-muted">
+              Làm bài tập và đạt từ {exerciseInfo.passScore}% để hoàn thành chủ đề.
+            </span>
+          ) : (
+            <button
+              className="btn btn-success btn-lg"
+              onClick={complete}
+              disabled={state.working || topic.progressStatus === "COMPLETED"}
+            >
+              {topic.progressStatus === "COMPLETED"
+                ? "Đã hoàn thành"
+                : state.working
+                  ? "Đang lưu…"
+                  : "Đánh dấu hoàn thành"}
+            </button>
+          )}
         </div>
       </main>
     </MaterialShell>

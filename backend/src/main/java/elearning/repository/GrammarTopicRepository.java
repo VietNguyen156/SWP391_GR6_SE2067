@@ -31,4 +31,6 @@ public interface GrammarTopicRepository extends JpaRepository<GrammarTopic, Long
 
     List<GrammarTopic> findAllByLessonIdOrderByCreatedAtAsc(Long lessonId);
 
+    List<GrammarTopic> findAllByCourseWeekCourseIdInAndStatus(
+            Collection<Long> courseIds, GrammarTopic.Status status);
 }

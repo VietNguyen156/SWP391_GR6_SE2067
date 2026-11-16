@@ -6,8 +6,18 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "listening_attempts")
+@Table(
+        name = "listening_attempts",
+        uniqueConstraints =
+                @UniqueConstraint(
+                        name = "uq_listening_assessment_slot",
+                        columnNames = {"listening_id", "student_id", "assessment_slot"}))
 public class ListeningAttempt {
+    public enum Type {
+        ASSESSMENT,
+        TARGETED_PRACTICE
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -21,6 +31,17 @@ public class ListeningAttempt {
     private User student;
 
     private BigDecimal score;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "attempt_type", nullable = false, length = 30)
+    private Type type = Type.ASSESSMENT;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "practice_skill", length = 30)
+    private ListeningQuestion.SkillType practiceSkill;
+
+    @Column(name = "assessment_slot")
+    private Integer assessmentSlot;
 
     @Column(name = "submitted_at", nullable = false)
     private LocalDateTime submittedAt;
@@ -60,5 +81,29 @@ public class ListeningAttempt {
 
     public LocalDateTime getSubmittedAt() {
         return submittedAt;
+    }
+
+    public Type getType() {
+        return type;
+    }
+
+    public void setType(Type v) {
+        type = v;
+    }
+
+    public ListeningQuestion.SkillType getPracticeSkill() {
+        return practiceSkill;
+    }
+
+    public void setPracticeSkill(ListeningQuestion.SkillType v) {
+        practiceSkill = v;
+    }
+
+    public Integer getAssessmentSlot() {
+        return assessmentSlot;
+    }
+
+    public void setAssessmentSlot(Integer v) {
+        assessmentSlot = v;
     }
 }

@@ -15,6 +15,12 @@ public class StudentGrammarProgress {
         COMPLETED
     }
 
+    public enum Mastery {
+        NEW,
+        LEARNING,
+        MASTERED
+    }
+
     @Id
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "student_id")
@@ -34,6 +40,22 @@ public class StudentGrammarProgress {
 
     @Column(name = "last_accessed_at")
     private LocalDateTime lastAccessedAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Mastery mastery = Mastery.NEW;
+
+    @Column(name = "best_score", precision = 5, scale = 2)
+    private BigDecimal bestScore;
+
+    @Column(name = "last_score", precision = 5, scale = 2)
+    private BigDecimal lastScore;
+
+    @Column(name = "exercise_attempts", nullable = false)
+    private Integer exerciseAttempts = 0;
+
+    @Column(name = "last_practiced_at")
+    private LocalDateTime lastPracticedAt;
 
     public User getStudent() {
         return student;
@@ -73,5 +95,45 @@ public class StudentGrammarProgress {
 
     public void setLastAccessedAt(LocalDateTime v) {
         lastAccessedAt = v;
+    }
+
+    public Mastery getMastery() {
+        return mastery;
+    }
+
+    public void setMastery(Mastery v) {
+        mastery = v;
+    }
+
+    public BigDecimal getBestScore() {
+        return bestScore;
+    }
+
+    public void setBestScore(BigDecimal v) {
+        bestScore = v;
+    }
+
+    public BigDecimal getLastScore() {
+        return lastScore;
+    }
+
+    public void setLastScore(BigDecimal v) {
+        lastScore = v;
+    }
+
+    public Integer getExerciseAttempts() {
+        return exerciseAttempts;
+    }
+
+    public void setExerciseAttempts(Integer v) {
+        exerciseAttempts = v;
+    }
+
+    public LocalDateTime getLastPracticedAt() {
+        return lastPracticedAt;
+    }
+
+    public void setLastPracticedAt(LocalDateTime v) {
+        lastPracticedAt = v;
     }
 }

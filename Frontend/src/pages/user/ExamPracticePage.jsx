@@ -5,6 +5,13 @@ import LoadingState from "../../components/common/LoadingState";
 import { studentPracticeApi } from "../../services/learningContentService";
 import { apiError } from "../../utils/apiError";
 import { formatNumber, formatPercent } from "../../utils/format";
+import { MASTERY_LABELS } from "../../utils/listeningSkills";
+
+const GRAMMAR_REASONS = {
+  NOT_STARTED: "Chưa làm bài tập",
+  WEAK: "Chưa đạt ngưỡng",
+  REVIEW_DUE: "Đến hạn ôn lại",
+};
 
 function SkillStatus({ score, hasData, needsPractice }) {
   if (!hasData) return <span className="practice-status is-new">Chưa đủ dữ liệu</span>;
@@ -48,7 +55,7 @@ export default function ExamPracticePage() {
       <header className="student-practice-hero">
         <div>
           <p className="student-practice-kicker">ÔN LUYỆN CÁ NHÂN HÓA</p>
-          <h1>Kế hoạch ôn Reading & Speaking</h1>
+          <h1>Kế hoạch ôn Listening, Grammar, Reading & Speaking</h1>
           <p>
             Hệ thống tổng hợp kết quả chính thức và chọn bài đang mở trong các khóa học bạn tham
             gia. Bài luyện không thay đổi điểm đánh giá.
@@ -184,6 +191,118 @@ export default function ExamPracticePage() {
                       </Link>
                     </div>
                   ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="student-practice-section">
+        <div className="student-practice-section-heading">
+          <div>
+            <span className="student-practice-overline">03 · NGHE</span>
+            <h2>Luyện Listening theo kỹ năng</h2>
+            <p>
+              Điểm lấy từ câu trả lời gần nhất của từng câu. Luyện theo kỹ năng chỉ khả dụng sau
+              khi bạn đã hoàn thành bài đánh giá của đề đó.
+            </p>
+          </div>
+        </div>
+        {plan.listeningSkills.length === 0 ? (
+          <div className="student-practice-empty">
+            Chưa có bài Listening được mở hoặc chưa có dữ liệu kỹ năng.
+          </div>
+        ) : (
+          <div className="student-practice-skill-grid">
+            {plan.listeningSkills.map((skill) => (
+              <article
+                className={`student-practice-card ${skill.needsPractice ? "is-priority" : ""}`}
+                key={skill.skillType}
+              >
+                <div className="student-practice-card-head">
+                  <div>
+                    <h3>{skill.label}</h3>
+                    <small>
+                      {skill.hasAssessmentData
+                        ? `${skill.correct}/${skill.total} câu đúng`
+                        : "Chưa có lượt đánh giá cho kỹ năng này"}
+                    </small>
+                  </div>
+                  <SkillStatus
+                    score={skill.score}
+                    hasData={skill.hasAssessmentData}
+                    needsPractice={skill.needsPractice}
+                  />
+                </div>
+                <div className="student-practice-activity-list">
+                  {skill.activities.map((activity) => (
+                    <div className="student-practice-activity" key={activity.activityId}>
+                      <div>
+                        <strong>{activity.title}</strong>
+                        <span>
+                          {activity.courseTitle} · {activity.questionCount} câu thuộc kỹ năng này
+                        </span>
+                      </div>
+                      <Link
+                        className="btn btn-outline-primary btn-sm"
+                        to={`/listening/${activity.activityId}?practiceSkill=${skill.skillType}`}
+                      >
+                        Luyện đề
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="student-practice-section">
+        <div className="student-practice-section-heading">
+          <div>
+            <span className="student-practice-overline">04 · NGỮ PHÁP</span>
+            <h2>Ôn Grammar theo mức nắm vững</h2>
+            <p>
+              Chủ đề chưa làm, chưa đạt ngưỡng hoặc đã quá 14 ngày được ưu tiên lên đầu.
+            </p>
+          </div>
+        </div>
+        {plan.grammarTopics.length === 0 ? (
+          <div className="student-practice-empty">
+            Chưa có chủ đề ngữ pháp có bài tập trong các khóa học bạn tham gia.
+          </div>
+        ) : (
+          <div className="student-practice-skill-grid">
+            {plan.grammarTopics.map((topic) => (
+              <article
+                className={`student-practice-card ${topic.needsPractice ? "is-priority" : ""}`}
+                key={topic.topicId}
+              >
+                <div className="student-practice-card-head">
+                  <div>
+                    <h3>{topic.title}</h3>
+                    <small>
+                      {topic.courseTitle} · {topic.exerciseCount} câu · đạt từ {topic.passScore}%
+                      {topic.attemptCount > 0 &&
+                        ` · điểm cao nhất ${formatPercent(topic.bestScore)} (${topic.attemptCount} lượt)`}
+                    </small>
+                  </div>
+                  <span className={`practice-status ${topic.needsPractice ? "is-weak" : "is-good"}`}>
+                    {MASTERY_LABELS[topic.mastery] || topic.mastery}
+                    {topic.reason && ` · ${GRAMMAR_REASONS[topic.reason] || topic.reason}`}
+                  </span>
+                </div>
+                <div className="student-practice-activity-list">
+                  <div className="student-practice-activity">
+                    <div>
+                      <strong>Bài tập chủ đề</strong>
+                    </div>
+                    <Link className="btn btn-outline-primary btn-sm" to={`/grammar/${topic.topicId}`}>
+                      {topic.attemptCount ? "Làm lại" : "Làm bài"}
+                    </Link>
+                  </div>
                 </div>
               </article>
             ))}

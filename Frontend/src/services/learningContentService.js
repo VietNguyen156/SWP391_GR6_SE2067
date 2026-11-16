@@ -15,6 +15,16 @@ export const grammarApi = {
   deleteContent: async (id) => axiosClient.delete(`/teacher/grammar/content/${id}`),
   get: async (id) => (await axiosClient.get(`/grammar/topics/${id}`)).data,
   complete: async (id) => (await axiosClient.post(`/grammar/${id}/complete`)).data,
+  exercises: async (id) => (await axiosClient.get(`/grammar/topics/${id}/exercises`)).data,
+  submitExercises: async (id, answers) =>
+    (await axiosClient.post(`/grammar/topics/${id}/exercises/submit`, { answers })).data,
+  exerciseHistory: async (id) =>
+    (await axiosClient.get(`/grammar/topics/${id}/exercises/history`)).data,
+  teacherExercises: async (id) =>
+    (await axiosClient.get(`/teacher/grammar/topics/${id}/exercises`)).data,
+  saveExercises: async (id, data) =>
+    (await axiosClient.put(`/teacher/grammar/topics/${id}/exercises`, data)).data,
+  topicStats: async (id) => (await axiosClient.get(`/teacher/grammar/topics/${id}/stats`)).data,
   // Tệp / link đính kèm của từng phần giải thích (contentId)
   uploadAttachment: async (contentId, file, title, onProgress) => {
     const form = new FormData();
@@ -71,6 +81,17 @@ export const listeningApi = {
     const response = await axiosClient.get(`/listening/${id}/result`);
     return response.status === 204 ? null : response.data;
   },
+  history: async (id) => (await axiosClient.get(`/listening/${id}/history`)).data,
+  practiceGet: async (id, skillType) =>
+    (await axiosClient.get(`/listening/${id}/practice/${skillType}`)).data,
+  practiceResult: async (id, skillType) => {
+    const response = await axiosClient.get(`/listening/${id}/practice/${skillType}/result`);
+    return response.status === 204 ? null : response.data;
+  },
+  practiceHistory: async (id, skillType) =>
+    (await axiosClient.get(`/listening/${id}/practice/${skillType}/history`)).data,
+  practiceSubmit: async (id, skillType, answers) =>
+    (await axiosClient.post(`/listening/${id}/practice/${skillType}/submit`, { answers })).data,
   submit: async (id, answers) =>
     (await axiosClient.post(`/listening/${id}/submit`, { answers })).data,
 };

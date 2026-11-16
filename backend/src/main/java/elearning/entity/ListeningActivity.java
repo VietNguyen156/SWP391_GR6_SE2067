@@ -41,6 +41,9 @@ public class ListeningActivity {
     @Column(name = "audio_url", length = 1000)
     private String audioUrl;
 
+    @Column(columnDefinition = "TEXT")
+    private String transcript;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Status status = Status.DRAFT;
@@ -121,6 +124,14 @@ public class ListeningActivity {
 
     public void setAudioUrl(String v) {
         audioUrl = v;
+    }
+
+    public String getTranscript() {
+        return transcript;
+    }
+
+    public void setTranscript(String v) {
+        transcript = v;
     }
 
     public Status getStatus() {

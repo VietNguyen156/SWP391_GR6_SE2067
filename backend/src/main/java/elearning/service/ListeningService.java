@@ -80,6 +80,7 @@ public class ListeningService {
         a.setDescription(clean(r.description()));
         a.setInstruction(clean(r.instruction()));
         a.setAudioUrl(clean(r.audioUrl()));
+        a.setTranscript(clean(r.transcript()));
         // Ẩn/hiện chỉ còn ở khóa học và tuần; bài và học liệu luôn hiển thị.
         a.setStatus(ListeningActivity.Status.PUBLISHED);
         if (a.getAudioUrl() == null) {
@@ -101,6 +102,11 @@ public class ListeningService {
                 q.setActivity(a);
                 q.setQuestionText(qr.questionText().trim());
                 q.setSortOrder(qi++);
+                q.setSkillType(qr.skillType());
+                q.setExplanation(clean(qr.explanation()));
+                q.setTranscriptExcerpt(clean(qr.transcriptExcerpt()));
+                q.setAudioStartSec(qr.audioStartSec());
+                q.setAudioEndSec(qr.audioEndSec());
                 questions.save(q);
                 int oi = 1;
                 if (qr.options() != null)
@@ -194,9 +200,15 @@ public class ListeningService {
                                                                                 o.getId(),
                                                                                 o.getOptionText(),
                                                                                 o.isCorrect()))
-                                                        .toList()))
+                                                                                .toList(),
+                                                                        q.getSkillType(),
+                                                                        q.getExplanation(),
+                                                                        q.getTranscriptExcerpt(),
+                                                                        q.getAudioStartSec(),
+                                                                        q.getAudioEndSec()))
                         .toList(),
                 a.getId() != null && attempts.existsByActivityId(a.getId()),
-                a.getId() == null ? 0 : attempts.countByActivityId(a.getId()));
+                a.getId() == null ? 0 : attempts.countByActivityId(a.getId()),
+                a.getTranscript());
     }
 }

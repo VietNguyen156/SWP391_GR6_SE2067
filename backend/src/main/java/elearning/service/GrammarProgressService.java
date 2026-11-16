@@ -7,6 +7,7 @@ import elearning.entity.User;
 import elearning.entity.UserRole;
 import elearning.entity.UserStatus;
 import elearning.exception.ContentNotFoundException;
+import elearning.repository.GrammarExerciseRepository;
 import elearning.repository.GrammarTopicRepository;
 import elearning.repository.StudentGrammarProgressRepository;
 import elearning.repository.UserRepository;
@@ -21,6 +22,7 @@ import java.time.LocalDateTime;
 @Transactional
 public class GrammarProgressService {
     private final GrammarTopicRepository topics;
+    private final GrammarExerciseRepository exercises;
     private final StudentGrammarProgressRepository progress;
     private final UserRepository users;
     private final ProgressService tracking;
@@ -28,11 +30,13 @@ public class GrammarProgressService {
 
     public GrammarProgressService(
             GrammarTopicRepository t,
+            GrammarExerciseRepository exercises,
             StudentGrammarProgressRepository p,
             UserRepository u,
             ProgressService ps,
             GrammarService grammarService) {
         topics = t;
+        this.exercises = exercises;
         progress = p;
         users = u;
         tracking = ps;
@@ -55,6 +59,10 @@ public class GrammarProgressService {
                                 () ->
                                         new ContentNotFoundException(
                                                 "Không tìm thấy chủ đề ngữ pháp"));
+        if (exercises.existsByGrammarTopicId(id)) {
+            throw new IllegalArgumentException(
+                    "Hãy hoàn thành bài tập đạt ngưỡng trước khi đánh dấu chủ đề hoàn tất.");
+        }
         StudentGrammarProgress p =
                 progress.findByStudentIdAndGrammarTopicId(student.getId(), id)
                         .orElseGet(

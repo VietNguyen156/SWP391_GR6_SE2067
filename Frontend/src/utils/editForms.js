@@ -104,8 +104,14 @@ export function listeningToForm(activity, courseId) {
     description: text(activity.description),
     instruction: text(activity.instruction),
     audioUrl: text(activity.audioUrl),
+    transcript: text(activity.transcript),
     questions: (activity.questions || []).map((q) => ({
       questionText: text(q.questionText),
+      skillType: q.skillType || "DETAIL",
+      explanation: text(q.explanation),
+      transcriptExcerpt: text(q.transcriptExcerpt),
+      audioStartSec: q.audioStartSec ?? "",
+      audioEndSec: q.audioEndSec ?? "",
       options: (q.options || []).map((o) => ({
         optionText: text(o.optionText),
         correct: Boolean(o.correct),

@@ -5,6 +5,10 @@ import elearning.dto.GrammarDto.GrammarContentResponse;
 import elearning.dto.GrammarDto.GrammarTopicRequest;
 import elearning.dto.GrammarDto.GrammarTopicResponse;
 import elearning.dto.GrammarDto.GrammarTopicSummaryResponse;
+import elearning.dto.GrammarExerciseDto.SaveExercisesRequest;
+import elearning.dto.GrammarExerciseDto.TeacherExercisesResponse;
+import elearning.dto.GrammarExerciseDto.TopicStats;
+import elearning.service.GrammarExerciseService;
 import elearning.service.GrammarService;
 
 import jakarta.validation.Valid;
@@ -21,9 +25,27 @@ import java.util.List;
 @PreAuthorize("hasRole('TEACHER')")
 public class TeacherGrammarController {
     private final GrammarService service;
+    private final GrammarExerciseService exercises;
 
-    public TeacherGrammarController(GrammarService s) {
+    public TeacherGrammarController(GrammarService s, GrammarExerciseService exercises) {
         service = s;
+        this.exercises = exercises;
+    }
+
+    @GetMapping("/topics/{id}/exercises")
+    public TeacherExercisesResponse getExercises(Principal p, @PathVariable Long id) {
+        return exercises.teacherExercises(p.getName(), id);
+    }
+
+    @PutMapping("/topics/{id}/exercises")
+    public TeacherExercisesResponse saveExercises(
+            Principal p, @PathVariable Long id, @Valid @RequestBody SaveExercisesRequest request) {
+        return exercises.saveExercises(p.getName(), id, request);
+    }
+
+    @GetMapping("/topics/{id}/stats")
+    public TopicStats stats(Principal p, @PathVariable Long id) {
+        return exercises.stats(p.getName(), id);
     }
 
     @GetMapping("/topics")

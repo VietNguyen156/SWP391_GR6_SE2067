@@ -1,8 +1,11 @@
 package elearning.controller;
 
+import elearning.dto.ListeningDto.AttemptSummary;
 import elearning.dto.ListeningDto.ListeningResponse;
 import elearning.dto.ListeningDto.ListeningResultResponse;
 import elearning.dto.ListeningDto.ListeningSubmitRequest;
+import elearning.dto.ListeningDto.QuestionReview;
+import elearning.dto.ListeningDto.SkillAnalysis;
 import elearning.entity.ClassEnrollment;
 import elearning.entity.ListeningActivity;
 import elearning.entity.ListeningAnswer;
@@ -61,12 +64,142 @@ public class ListeningStudentController {
         this.lessonService = lessonService;
     }
 
+    /**
+     * Không kèm giải thích, transcript hay khoảng audio của câu hỏi: chỉ có trong kết quả sau khi
+     * nộp bài.
+     */
     @GetMapping("/{id}")
     public ListeningResponse get(Principal p, @PathVariable Long id) {
         User student = student(p.getName());
         ListeningActivity a = publishedActivity(id);
         requireEnrollment(student, a);
         requireLessonAccess(student, a);
+        return studentView(a, qs.findAllByActivityIdOrderBySortOrderAsc(id));
+    }
+
+    @GetMapping("/{id}/result")
+    public ResponseEntity<ListeningResultResponse> latestResult(
+            Principal p, @PathVariable Long id) {
+        User student = student(p.getName());
+        ListeningActivity activity = publishedActivity(id);
+        requireEnrollment(student, activity);
+        requireLessonAccess(student, activity);
+        return attempts.findFirstByActivityIdAndStudentIdAndAssessmentSlot(id, student.getId(), 1)
+                .map(this::result)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    /** Lịch sử mọi lần làm bài này (chính thức và luyện), mới nhất trước. */
+    @GetMapping("/{id}/history")
+    public List<AttemptSummary> history(Principal p, @PathVariable Long id) {
+        User student = student(p.getName());
+        ListeningActivity activity = publishedActivity(id);
+        requireEnrollment(student, activity);
+        requireLessonAccess(student, activity);
+        return attempts.findAllByActivityIdAndStudentIdOrderBySubmittedAtDescIdDesc(id, student.getId())
+                .stream()
+                .map(this::summary)
+                .toList();
+    }
+
+    @GetMapping("/{id}/practice/{skillType}")
+    public ListeningResponse practice(
+            Principal p,
+            @PathVariable Long id,
+            @PathVariable ListeningQuestion.SkillType skillType) {
+        User student = student(p.getName());
+        ListeningActivity activity = publishedActivity(id);
+        requireEnrollment(student, activity);
+        requireLessonAccess(student, activity);
+        requireAssessmentDone(student, activity);
+        return studentView(activity, practiceQuestions(id, skillType));
+    }
+
+    @GetMapping("/{id}/practice/{skillType}/result")
+    public ResponseEntity<ListeningResultResponse> latestPracticeResult(
+            Principal p,
+            @PathVariable Long id,
+            @PathVariable ListeningQuestion.SkillType skillType) {
+        User student = student(p.getName());
+        ListeningActivity activity = publishedActivity(id);
+        requireEnrollment(student, activity);
+        requireLessonAccess(student, activity);
+        return attempts
+                .findFirstByActivityIdAndStudentIdAndTypeAndPracticeSkillOrderBySubmittedAtDescIdDesc(
+                        id, student.getId(), ListeningAttempt.Type.TARGETED_PRACTICE, skillType)
+                .map(this::result)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    @GetMapping("/{id}/practice/{skillType}/history")
+    public List<AttemptSummary> practiceHistory(
+            Principal p,
+            @PathVariable Long id,
+            @PathVariable ListeningQuestion.SkillType skillType) {
+        User student = student(p.getName());
+        ListeningActivity activity = publishedActivity(id);
+        requireEnrollment(student, activity);
+        requireLessonAccess(student, activity);
+        return attempts
+                .findAllByActivityIdAndStudentIdAndTypeAndPracticeSkillOrderBySubmittedAtDescIdDesc(
+                        id, student.getId(), ListeningAttempt.Type.TARGETED_PRACTICE, skillType)
+                .stream()
+                .map(this::summary)
+                .toList();
+    }
+
+    @PostMapping("/{id}/submit")
+    public ListeningResultResponse submit(
+            Principal p, @PathVariable Long id, @RequestBody ListeningSubmitRequest r) {
+        User st = student(p.getName());
+        ListeningActivity a = publishedActivity(id);
+        requireEnrollment(st, a);
+        requireLessonAccess(st, a);
+
+        // Lượt chính thức là duy nhất: mở lại trang hay bấm nộp hai lần chỉ trả kết quả đã lưu.
+        var existing =
+                attempts.findFirstByActivityIdAndStudentIdAndAssessmentSlot(id, st.getId(), 1);
+        if (existing.isPresent()) return result(existing.get());
+
+        ListeningAttempt at =
+                saveAttempt(
+                        a,
+                        st,
+                        qs.findAllByActivityIdOrderBySortOrderAsc(id),
+                        r,
+                        ListeningAttempt.Type.ASSESSMENT,
+                        null,
+                        1);
+        lessonService.autoComplete(st, a.getLesson());
+        return result(at);
+    }
+
+    /** Luyện lại theo một kỹ năng; chỉ mở sau khi đã nộp bài chính thức, không ảnh hưởng điểm lớp. */
+    @PostMapping("/{id}/practice/{skillType}/submit")
+    public ListeningResultResponse submitPractice(
+            Principal p,
+            @PathVariable Long id,
+            @PathVariable ListeningQuestion.SkillType skillType,
+            @RequestBody ListeningSubmitRequest r) {
+        User st = student(p.getName());
+        ListeningActivity a = publishedActivity(id);
+        requireEnrollment(st, a);
+        requireLessonAccess(st, a);
+        requireAssessmentDone(st, a);
+        return result(
+                saveAttempt(
+                        a,
+                        st,
+                        practiceQuestions(id, skillType),
+                        r,
+                        ListeningAttempt.Type.TARGETED_PRACTICE,
+                        skillType,
+                        null));
+    }
+
+    private ListeningResponse studentView(ListeningActivity a, List<ListeningQuestion> questions) {
         return new ListeningResponse(
                 a.getId(),
                 a.getCourseWeek().getId(),
@@ -76,7 +209,7 @@ public class ListeningStudentController {
                 a.getInstruction(),
                 a.getAudioUrl(),
                 a.getStatus().name(),
-                qs.findAllByActivityIdOrderBySortOrderAsc(id).stream()
+                questions.stream()
                         .map(
                                 q ->
                                         new ListeningResponse.Question(
@@ -89,47 +222,58 @@ public class ListeningStudentController {
                                                                                 o.getId(),
                                                                                 o.getOptionText(),
                                                                                 false))
-                                                        .toList()))
+                                                        .toList(),
+                                                q.getSkillType(),
+                                                null,
+                                                null,
+                                                null,
+                                                null))
                         .toList(),
                 false,
-                0);
+                0,
+                null);
     }
 
-    @GetMapping("/{id}/result")
-    public ResponseEntity<ListeningResultResponse> latestResult(
-            Principal p, @PathVariable Long id) {
-        User student = student(p.getName());
-        ListeningActivity activity = publishedActivity(id);
-        requireEnrollment(student, activity);
-        requireLessonAccess(student, activity);
-        return attempts.findTopByActivityIdAndStudentIdOrderBySubmittedAtDesc(id, student.getId())
-                .map(this::result)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.noContent().build());
+    private List<ListeningQuestion> practiceQuestions(Long id, ListeningQuestion.SkillType skill) {
+        List<ListeningQuestion> selected =
+                qs.findAllByActivityIdOrderBySortOrderAsc(id).stream()
+                        .filter(q -> q.getSkillType() == skill)
+                        .toList();
+        if (selected.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Bài nghe chưa có câu hỏi thuộc kỹ năng " + skill.name());
+        }
+        return selected;
     }
 
-    @PostMapping("/{id}/submit")
-    public ListeningResultResponse submit(
-            Principal p, @PathVariable Long id, @RequestBody ListeningSubmitRequest r) {
-        User st = student(p.getName());
-        ListeningActivity a = publishedActivity(id);
-        requireEnrollment(st, a);
-        requireLessonAccess(st, a);
+    private void requireAssessmentDone(User student, ListeningActivity activity) {
+        if (!attempts.existsByActivityIdAndStudentIdAndAssessmentSlot(
+                activity.getId(), student.getId(), 1)) {
+            throw new IllegalArgumentException(
+                    "Hãy hoàn thành bài nghe chính thức trước khi luyện tập theo kỹ năng");
+        }
+    }
 
-        // A completed listening activity is persisted. Re-opening the page must show that result,
-        // not silently create another attempt because the user clicked submit twice or refreshed.
-        var existing =
-                attempts.findTopByActivityIdAndStudentIdOrderBySubmittedAtDesc(id, st.getId());
-        if (existing.isPresent()) return result(existing.get());
-
+    private ListeningAttempt saveAttempt(
+            ListeningActivity activity,
+            User student,
+            List<ListeningQuestion> questions,
+            ListeningSubmitRequest request,
+            ListeningAttempt.Type type,
+            ListeningQuestion.SkillType skillType,
+            Integer assessmentSlot) {
+        if (request == null) throw new IllegalArgumentException("Thiếu câu trả lời Listening");
         ListeningAttempt at = new ListeningAttempt();
-        at.setActivity(a);
-        at.setStudent(st);
+        at.setActivity(activity);
+        at.setStudent(student);
+        at.setType(type);
+        at.setPracticeSkill(skillType);
+        at.setAssessmentSlot(assessmentSlot);
         attempts.save(at);
         int total = 0, correct = 0;
-        for (ListeningQuestion q : qs.findAllByActivityIdOrderBySortOrderAsc(id)) {
+        for (ListeningQuestion q : questions) {
             total++;
-            Long oid = r.answers() == null ? null : r.answers().get(q.getId());
+            Long oid = request.answers() == null ? null : request.answers().get(q.getId());
             ListeningOption opt =
                     q.getOptions().stream()
                             .filter(o -> Objects.equals(o.getId(), oid))
@@ -148,9 +292,19 @@ public class ListeningStudentController {
                         ? BigDecimal.ZERO
                         : BigDecimal.valueOf(correct * 100.0 / total)
                                 .setScale(2, java.math.RoundingMode.HALF_UP));
-        attempts.save(at);
-        lessonService.autoComplete(st, a.getLesson());
-        return result(at);
+        return attempts.save(at);
+    }
+
+    private AttemptSummary summary(ListeningAttempt attempt) {
+        List<ListeningAnswer> rows = answers.findAllByAttemptId(attempt.getId());
+        return new AttemptSummary(
+                attempt.getId(),
+                attempt.getType().name(),
+                attempt.getPracticeSkill() == null ? null : attempt.getPracticeSkill().name(),
+                attempt.getScore(),
+                (int) rows.stream().filter(ListeningAnswer::isCorrect).count(),
+                rows.size(),
+                attempt.getSubmittedAt());
     }
 
     private ListeningResultResponse result(ListeningAttempt attempt) {
@@ -158,15 +312,44 @@ public class ListeningStudentController {
         int total = rows.size();
         int correct = (int) rows.stream().filter(ListeningAnswer::isCorrect).count();
         Map<Long, Long> selected = new LinkedHashMap<>();
+        Map<Long, Long> key = new LinkedHashMap<>();
+        Map<Long, QuestionReview> reviews = new LinkedHashMap<>();
+        Map<String, int[]> skillCounts = new LinkedHashMap<>();
         rows.stream()
-                .sorted(
-                        java.util.Comparator.comparing(
-                                row -> row.getQuestion().getSortOrder()))
+                .sorted(java.util.Comparator.comparing(row -> row.getQuestion().getSortOrder()))
                 .forEach(
-                        row ->
-                                selected.put(
-                                        row.getQuestion().getId(),
-                                        row.getOption() == null ? null : row.getOption().getId()));
+                        row -> {
+                            ListeningQuestion q = row.getQuestion();
+                            selected.put(
+                                    q.getId(), row.getOption() == null ? null : row.getOption().getId());
+                            q.getOptions().stream()
+                                    .filter(ListeningOption::isCorrect)
+                                    .findFirst()
+                                    .ifPresent(o -> key.put(q.getId(), o.getId()));
+                            reviews.put(
+                                    q.getId(),
+                                    new QuestionReview(
+                                            q.getExplanation(),
+                                            q.getTranscriptExcerpt(),
+                                            q.getAudioStartSec(),
+                                            q.getAudioEndSec()));
+                            int[] counts =
+                                    skillCounts.computeIfAbsent(
+                                            q.getSkillType().name(), ignored -> new int[2]);
+                            counts[1]++;
+                            if (row.isCorrect()) counts[0]++;
+                        });
+        Map<String, SkillAnalysis> analysis = new LinkedHashMap<>();
+        skillCounts.forEach(
+                (skill, counts) ->
+                        analysis.put(
+                                skill,
+                                new SkillAnalysis(
+                                        counts[0],
+                                        counts[1],
+                                        BigDecimal.valueOf(counts[0] * 100.0 / counts[1])
+                                                .setScale(2, java.math.RoundingMode.HALF_UP))));
+        boolean assessment = attempt.getType() == ListeningAttempt.Type.ASSESSMENT;
         return new ListeningResultResponse(
                 attempt.getId(),
                 attempt.getScore(),
@@ -174,18 +357,12 @@ public class ListeningStudentController {
                 total,
                 attempt.getSubmittedAt(),
                 selected,
-                correctAnswers(attempt.getActivity().getId()));
-    }
-
-    /** Câu → đáp án đúng, để trang kết quả chỉ ra câu nào sai và đáp án đúng là gì. */
-    private Map<Long, Long> correctAnswers(Long activityId) {
-        Map<Long, Long> correct = new LinkedHashMap<>();
-        for (ListeningQuestion q : qs.findAllByActivityIdOrderBySortOrderAsc(activityId))
-            q.getOptions().stream()
-                    .filter(o -> o.isCorrect())
-                    .findFirst()
-                    .ifPresent(o -> correct.put(q.getId(), o.getId()));
-        return correct;
+                key,
+                reviews,
+                assessment ? attempt.getActivity().getTranscript() : null,
+                attempt.getType().name(),
+                attempt.getPracticeSkill() == null ? null : attempt.getPracticeSkill().name(),
+                analysis);
     }
 
     private ListeningActivity publishedActivity(Long id) {

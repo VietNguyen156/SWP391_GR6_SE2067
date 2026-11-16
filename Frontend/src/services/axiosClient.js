@@ -34,7 +34,13 @@ axiosClient.interceptors.request.use((config) => {
 });
 
 axiosClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const { method, url } = response.config || {};
+    if (method && method !== "get" && url?.includes("/teacher/")) {
+      window.dispatchEvent(new Event("teacher:changed"));
+    }
+    return response;
+  },
   async (error) => {
     const original = error.config;
     const refreshToken = localStorage.getItem("refresh_token");

@@ -1,5 +1,8 @@
 package elearning.service;
 
+import elearning.dto.ExamPracticeDto.GrammarTopicPlan;
+import elearning.dto.ExamPracticeDto.ListeningPracticeActivity;
+import elearning.dto.ExamPracticeDto.ListeningSkillPlan;
 import elearning.dto.ExamPracticeDto.PracticePlan;
 import elearning.dto.ExamPracticeDto.ReadingPracticeActivity;
 import elearning.dto.ExamPracticeDto.ReadingSkillPlan;
@@ -8,7 +11,12 @@ import elearning.dto.ExamPracticeDto.SpeakingSkillPlan;
 import elearning.entity.ClassEnrollment;
 import elearning.entity.Course;
 import elearning.entity.CourseWeek;
+import elearning.entity.GrammarTopic;
 import elearning.entity.Lesson;
+import elearning.entity.ListeningActivity;
+import elearning.entity.ListeningAnswer;
+import elearning.entity.ListeningQuestion;
+import elearning.entity.StudentGrammarProgress;
 import elearning.entity.ReadingActivity;
 import elearning.entity.ReadingAnswer;
 import elearning.entity.ReadingAttempt;
@@ -19,12 +27,19 @@ import elearning.entity.User;
 import elearning.entity.UserRole;
 import elearning.entity.UserStatus;
 import elearning.repository.ClassEnrollmentRepository;
+import elearning.repository.GrammarExerciseRepository;
+import elearning.repository.GrammarTopicRepository;
+import elearning.repository.ListeningActivityRepository;
+import elearning.repository.ListeningAnswerRepository;
+import elearning.repository.ListeningAttemptRepository;
+import elearning.repository.ListeningQuestionRepository;
 import elearning.repository.ReadingActivityRepository;
 import elearning.repository.ReadingAnswerRepository;
 import elearning.repository.ReadingAttemptRepository;
 import elearning.repository.ReadingQuestionRepository;
 import elearning.repository.SpeakingActivityRepository;
 import elearning.repository.SpeakingSubmissionRepository;
+import elearning.repository.StudentGrammarProgressRepository;
 import elearning.repository.UserRepository;
 
 import org.springframework.stereotype.Service;
@@ -32,6 +47,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.LinkedHashSet;
@@ -53,6 +70,16 @@ public class ExamPracticeService {
     private final SpeakingActivityRepository speakingActivities;
     private final SpeakingSubmissionRepository speakingSubmissions;
     private final LessonService lessonService;
+    private final ListeningActivityRepository listeningActivities;
+    private final ListeningQuestionRepository listeningQuestions;
+    private final ListeningAttemptRepository listeningAttempts;
+    private final ListeningAnswerRepository listeningAnswers;
+    private final GrammarTopicRepository grammarTopics;
+    private final GrammarExerciseRepository grammarExercises;
+    private final StudentGrammarProgressRepository grammarProgress;
+
+    /** Sau ngần ấy ngày không luyện, chủ đề đã nắm vững được nhắc ôn lại. */
+    static final int REVIEW_AFTER_DAYS = 14;
 
     public ExamPracticeService(
             UserRepository users,
@@ -63,7 +90,14 @@ public class ExamPracticeService {
             ReadingAnswerRepository readingAnswers,
             SpeakingActivityRepository speakingActivities,
             SpeakingSubmissionRepository speakingSubmissions,
-            LessonService lessonService) {
+            LessonService lessonService,
+            ListeningActivityRepository listeningActivities,
+            ListeningQuestionRepository listeningQuestions,
+            ListeningAttemptRepository listeningAttempts,
+            ListeningAnswerRepository listeningAnswers,
+            GrammarTopicRepository grammarTopics,
+            GrammarExerciseRepository grammarExercises,
+            StudentGrammarProgressRepository grammarProgress) {
         this.users = users;
         this.enrollments = enrollments;
         this.readingActivities = readingActivities;
@@ -73,6 +107,13 @@ public class ExamPracticeService {
         this.speakingActivities = speakingActivities;
         this.speakingSubmissions = speakingSubmissions;
         this.lessonService = lessonService;
+        this.listeningActivities = listeningActivities;
+        this.listeningQuestions = listeningQuestions;
+        this.listeningAttempts = listeningAttempts;
+        this.listeningAnswers = listeningAnswers;
+        this.grammarTopics = grammarTopics;
+        this.grammarExercises = grammarExercises;
+        this.grammarProgress = grammarProgress;
     }
 
     @Transactional(readOnly = true)
@@ -92,7 +133,7 @@ public class ExamPracticeService {
                         .stream()
                         .map(enrollment -> enrollment.getClassroom().getCourse().getId())
                         .collect(LinkedHashSet::new, Set::add, Set::addAll);
-        if (courseIds.isEmpty()) return new PracticePlan(List.of(), List.of());
+        if (courseIds.isEmpty()) return new PracticePlan(List.of(), List.of(), List.of(), List.of());
 
         List<ReadingActivity> availableReading =
                 readingActivities
@@ -111,7 +152,209 @@ public class ExamPracticeService {
 
         return new PracticePlan(
                 readingPlan(student.getId(), courseIds, availableReading),
-                speakingPlan(student, courseIds, availableSpeaking));
+                speakingPlan(student, courseIds, availableSpeaking),
+                listeningPlan(student, courseIds),
+                grammarPlan(student, courseIds));
+    }
+
+    private List<ListeningSkillPlan> listeningPlan(User student, Set<Long> courseIds) {
+        List<ListeningActivity> activities =
+                listeningActivities
+                        .findAllByCourseWeekCourseIdInAndStatusOrderByUpdatedAtDesc(
+                                courseIds, ListeningActivity.Status.PUBLISHED)
+                        .stream()
+                        .filter(activity -> isAccessible(activity, student))
+                        .toList();
+
+        // Mỗi câu chỉ tính câu trả lời gần nhất (lượt chính thức hoặc lượt luyện), nên luyện đúng
+        // thì điểm kỹ năng tăng lên và gợi ý tự rút bớt.
+        Map<Long, Boolean> latestCorrect = new java.util.HashMap<>();
+        Map<Long, ListeningQuestion.SkillType> skillOfQuestion = new java.util.HashMap<>();
+        List<elearning.entity.ListeningAttempt> attempts =
+                listeningAttempts
+                        .findAllByStudentIdAndActivityCourseWeekCourseIdInOrderBySubmittedAtDesc(
+                                student.getId(), courseIds)
+                        .stream()
+                        .filter(attempt -> isVisible(attempt.getActivity()))
+                        .toList();
+        if (!attempts.isEmpty()) {
+            Map<Long, LocalDateTime> submittedAt = new java.util.HashMap<>();
+            for (var attempt : attempts) submittedAt.put(attempt.getId(), attempt.getSubmittedAt());
+            List<ListeningAnswer> rows =
+                    new ArrayList<>(
+                            listeningAnswers.findAllByAttemptIdIn(
+                                    attempts.stream()
+                                            .map(elearning.entity.ListeningAttempt::getId)
+                                            .toList()));
+            rows.sort(
+                    (left, right) -> {
+                        int byTime =
+                                submittedAt
+                                        .get(right.getAttempt().getId())
+                                        .compareTo(submittedAt.get(left.getAttempt().getId()));
+                        return byTime != 0
+                                ? byTime
+                                : Long.compare(right.getAttempt().getId(), left.getAttempt().getId());
+                    });
+            for (ListeningAnswer row : rows) {
+                Long questionId = row.getQuestion().getId();
+                if (latestCorrect.containsKey(questionId)) continue;
+                latestCorrect.put(questionId, row.isCorrect());
+                skillOfQuestion.put(questionId, row.getQuestion().getSkillType());
+            }
+        }
+        Map<ListeningQuestion.SkillType, SkillCounts> counts =
+                new EnumMap<>(ListeningQuestion.SkillType.class);
+        for (ListeningQuestion.SkillType skill : ListeningQuestion.SkillType.values()) {
+            counts.put(skill, new SkillCounts());
+        }
+        latestCorrect.forEach(
+                (questionId, ok) -> {
+                    SkillCounts c = counts.get(skillOfQuestion.get(questionId));
+                    c.total++;
+                    if (ok) c.correct++;
+                });
+
+        Map<ListeningQuestion.SkillType, List<ListeningPracticeActivity>> sources =
+                new EnumMap<>(ListeningQuestion.SkillType.class);
+        for (ListeningQuestion.SkillType skill : ListeningQuestion.SkillType.values()) {
+            sources.put(skill, new ArrayList<>());
+        }
+        for (ListeningActivity activity : activities) {
+            // Chỉ gợi ý bài đã nộp chính thức: lượt luyện theo kỹ năng chỉ mở sau đó.
+            if (!listeningAttempts.existsByActivityIdAndStudentIdAndAssessmentSlot(
+                    activity.getId(), student.getId(), 1)) {
+                continue;
+            }
+            Map<ListeningQuestion.SkillType, Integer> perSkill =
+                    new EnumMap<>(ListeningQuestion.SkillType.class);
+            for (ListeningQuestion q :
+                    listeningQuestions.findAllByActivityIdOrderBySortOrderAsc(activity.getId())) {
+                perSkill.merge(q.getSkillType(), 1, Integer::sum);
+            }
+            perSkill.forEach(
+                    (skill, n) ->
+                            sources.get(skill)
+                                    .add(
+                                            new ListeningPracticeActivity(
+                                                    activity.getId(),
+                                                    activity.getTitle(),
+                                                    activity.getCourseWeek().getCourse().getTitle(),
+                                                    n)));
+        }
+        List<ListeningSkillPlan> result = new ArrayList<>();
+        for (ListeningQuestion.SkillType skill : ListeningQuestion.SkillType.values()) {
+            if (sources.get(skill).isEmpty()) continue;
+            SkillCounts c = counts.get(skill);
+            BigDecimal score =
+                    c.total == 0
+                            ? null
+                            : BigDecimal.valueOf(c.correct * 100.0 / c.total)
+                                    .setScale(2, RoundingMode.HALF_UP);
+            result.add(
+                    new ListeningSkillPlan(
+                            skill.name(),
+                            listeningSkillLabel(skill),
+                            c.correct,
+                            c.total,
+                            score,
+                            c.total > 0,
+                            score != null && score.compareTo(PRACTICE_THRESHOLD) < 0,
+                            sources.get(skill)));
+        }
+        result.sort(
+                (left, right) -> {
+                    if (left.score() == null) return right.score() == null ? 0 : 1;
+                    if (right.score() == null) return -1;
+                    return left.score().compareTo(right.score());
+                });
+        return result;
+    }
+
+    private List<GrammarTopicPlan> grammarPlan(User student, Set<Long> courseIds) {
+        Map<Long, StudentGrammarProgress> progressByTopic = new java.util.HashMap<>();
+        for (StudentGrammarProgress p : grammarProgress.findAllByStudentId(student.getId())) {
+            progressByTopic.put(p.getGrammarTopic().getId(), p);
+        }
+        LocalDateTime reviewBefore = LocalDateTime.now().minusDays(REVIEW_AFTER_DAYS);
+        List<GrammarTopicPlan> result = new ArrayList<>();
+        for (GrammarTopic topic :
+                grammarTopics.findAllByCourseWeekCourseIdInAndStatus(
+                        courseIds, GrammarTopic.Status.PUBLISHED)) {
+            if (!isAccessible(topic, student)) continue;
+            int exerciseCount = (int) grammarExercises.countByGrammarTopicId(topic.getId());
+            if (exerciseCount == 0) continue;
+            StudentGrammarProgress p = progressByTopic.get(topic.getId());
+            StudentGrammarProgress.Mastery mastery =
+                    p == null ? StudentGrammarProgress.Mastery.NEW : p.getMastery();
+            String reason = null;
+            if (mastery == StudentGrammarProgress.Mastery.NEW) reason = "NOT_STARTED";
+            else if (mastery == StudentGrammarProgress.Mastery.LEARNING) reason = "WEAK";
+            else if (p.getLastPracticedAt() != null && p.getLastPracticedAt().isBefore(reviewBefore))
+                reason = "REVIEW_DUE";
+            result.add(
+                    new GrammarTopicPlan(
+                            topic.getId(),
+                            topic.getTitle(),
+                            topic.getCourseWeek().getCourse().getTitle(),
+                            topic.getLevel().name(),
+                            mastery.name(),
+                            p == null ? null : p.getBestScore(),
+                            p == null ? null : p.getLastScore(),
+                            p == null ? 0 : p.getExerciseAttempts(),
+                            topic.getPassScore(),
+                            exerciseCount,
+                            reason,
+                            reason != null));
+        }
+        // Yếu nhất lên đầu, rồi đến chủ đề chưa làm, rồi chủ đề cần ôn lại, cuối cùng đã vững.
+        result.sort(
+                java.util.Comparator.comparingInt((GrammarTopicPlan t) -> grammarRank(t.reason()))
+                        .thenComparing(
+                                t -> t.lastScore() == null ? BigDecimal.valueOf(101) : t.lastScore()));
+        return result;
+    }
+
+    private static int grammarRank(String reason) {
+        if (reason == null) return 3;
+        return switch (reason) {
+            case "WEAK" -> 0;
+            case "NOT_STARTED" -> 1;
+            default -> 2;
+        };
+    }
+
+    private boolean isVisible(ListeningActivity activity) {
+        return activity.getStatus() == ListeningActivity.Status.PUBLISHED
+                && activity.getCourseWeek() != null
+                && activity.getCourseWeek().getStatus() == CourseWeek.Status.PUBLISHED
+                && activity.getCourseWeek().getCourse().getStatus() == Course.Status.PUBLISHED
+                && (activity.getLesson() == null
+                        || activity.getLesson().getStatus() == Lesson.Status.PUBLISHED);
+    }
+
+    private boolean isAccessible(ListeningActivity activity, User student) {
+        return isVisible(activity)
+                && (activity.getLesson() == null
+                        || !lessonService.accessState(student, activity.getLesson()).locked());
+    }
+
+    private boolean isAccessible(GrammarTopic topic, User student) {
+        return topic.getCourseWeek() != null
+                && topic.getCourseWeek().getStatus() == CourseWeek.Status.PUBLISHED
+                && topic.getCourseWeek().getCourse().getStatus() == Course.Status.PUBLISHED
+                && (topic.getLesson() == null
+                        || (topic.getLesson().getStatus() == Lesson.Status.PUBLISHED
+                                && !lessonService.accessState(student, topic.getLesson()).locked()));
+    }
+
+    private String listeningSkillLabel(ListeningQuestion.SkillType skill) {
+        return switch (skill) {
+            case MAIN_IDEA -> "Nắm ý chính";
+            case DETAIL -> "Nghe thông tin chi tiết";
+            case PURPOSE -> "Mục đích người nói";
+            case INFERENCE -> "Suy luận từ hội thoại";
+        };
     }
 
     private List<ReadingSkillPlan> readingPlan(

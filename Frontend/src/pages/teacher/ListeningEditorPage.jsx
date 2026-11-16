@@ -27,6 +27,7 @@ const blank = () => ({
   description: "",
   instruction: "",
   audioUrl: "",
+  transcript: "",
   questions: [question()],
 });
 export default function ListeningEditorPage({ mode: routeMode }) {
@@ -89,7 +90,16 @@ export default function ListeningEditorPage({ mode: routeMode }) {
         description: form.description,
         instruction: form.instruction,
         audioUrl: form.audioUrl,
-        questions: form.questions,
+        transcript: form.transcript,
+        questions: form.questions.map((q) => ({
+          questionText: q.questionText,
+          options: q.options,
+          skillType: q.skillType || "DETAIL",
+          explanation: q.explanation,
+          transcriptExcerpt: q.transcriptExcerpt,
+          audioStartSec: q.audioStartSec === "" || q.audioStartSec == null ? null : Number(q.audioStartSec),
+          audioEndSec: q.audioEndSec === "" || q.audioEndSec == null ? null : Number(q.audioEndSec),
+        })),
       };
       const saved = editing
         ? await listeningApi.teacherUpdate(id, payload)
@@ -171,6 +181,19 @@ export default function ListeningEditorPage({ mode: routeMode }) {
                   </div>
                 )}
               </div>
+              <div className="col-12">
+                <label className="form-label" htmlFor="listening-transcript">
+                  Transcript (toàn văn bài nghe)
+                </label>
+                <textarea
+                  id="listening-transcript"
+                  className="form-control"
+                  rows="5"
+                  placeholder="Tùy chọn. Học viên chỉ xem được sau khi đã nộp bài chính thức."
+                  value={form.transcript}
+                  onChange={(e) => setForm({ ...form, transcript: e.target.value })}
+                />
+              </div>
             </>
           )}
         </div>
@@ -178,11 +201,13 @@ export default function ListeningEditorPage({ mode: routeMode }) {
           <>
             <hr className="my-4" />
             <McqFileImport
+              kind="listening"
               questions={form.questions}
               onChange={(questions) => setForm((f) => ({ ...f, questions }))}
-              kind="listening"
+              disabled={inUse}
             />
             <McqEditor
+              listening
               questions={form.questions}
               onChange={(questions) => setForm((f) => ({ ...f, questions }))}
             />

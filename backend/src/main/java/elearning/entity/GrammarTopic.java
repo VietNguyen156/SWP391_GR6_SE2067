@@ -49,6 +49,9 @@ public class GrammarTopic {
     @Column(nullable = false, length = 20)
     private Status status = Status.DRAFT;
 
+    @Column(name = "pass_score", nullable = false)
+    private Integer passScore = 70;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -129,6 +132,14 @@ public class GrammarTopic {
 
     public void setStatus(Status v) {
         status = v;
+    }
+
+    public Integer getPassScore() {
+        return passScore;
+    }
+
+    public void setPassScore(Integer v) {
+        passScore = v;
     }
 
     public LocalDateTime getCreatedAt() {
