@@ -286,7 +286,11 @@ export default function CourseDetailPage() {
                         : "Mở Test"}
                   </Link>
                 ) : (
-                  <p className="mb-0">Hoàn thành khóa học để mở Test.</p>
+                  <p className="mb-0">
+                    {finalTest.contentPending
+                      ? "Khóa học còn tuần chưa mở, Test sẽ mở khi giảng viên công bố đủ nội dung."
+                      : "Hoàn thành khóa học để mở Test."}
+                  </p>
                 )}
               </section>
             )}

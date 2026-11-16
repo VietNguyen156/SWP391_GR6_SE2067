@@ -10,6 +10,7 @@ import { roleLabel } from "../utils/statusLabels";
 const studentLinks = [
   ["/dashboard", "Trang chủ", "home"],
   ["/courses", "Khóa học của tôi", "book"],
+  ["/practice", "Ôn thi", "results"],
   ["/flashcards", "Flashcard", "cards"],
   ["/results", "Kết quả", "results"],
 ];

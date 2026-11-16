@@ -1,5 +1,7 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import CourseCard from "../../components/course/CourseCard";
+import { getPublicCourses } from "../../services/courseService";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Icon from "../../components/common/Icon";
@@ -72,6 +74,12 @@ const roadmapSteps = [
 
 export default function HomePage() {
   const { user } = useAuth();
+  const [courses, setCourses] = useState([]);
+  useEffect(() => {
+    getPublicCourses()
+      .then(setCourses)
+      .catch(() => {});
+  }, []);
   const heroRef = useRef(null);
   const timelineRef = useRef(null);
   const methodRef = useRef(null);
@@ -209,6 +217,20 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+
+      {/* Danh sách khóa học: khách bấm vào sẽ được mời đăng nhập / đăng ký */}
+      {courses.length > 0 && (
+        <section className="container" aria-labelledby="home-courses-title">
+          <h2 id="home-courses-title">Các khóa học</h2>
+          <ul className="sc-course-grid">
+            {courses.map((course) => (
+              <li key={course.id}>
+                <CourseCard course={course} to={user ? undefined : "/register"} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Learning Method Section with GSAP Scroll Reveal & Motion Hover */}
       <section

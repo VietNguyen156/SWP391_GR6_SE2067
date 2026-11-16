@@ -191,7 +191,11 @@ public class OrderService {
         return response(order, true);
     }
 
-    /** Trạng thái mua khóa của học viên + lộ trình xem trước (tên tuần, tên bài) cho trang khóa học. */
+    /**
+     * Trạng thái mua khóa của học viên + lộ trình xem trước (tên tuần, tên bài) cho trang khóa học. Lộ trình
+     * gồm cả tuần/bài đang ẩn để học viên biết trước toàn bộ nội dung khi mua; tuần ẩn được đánh dấu "sắp mở".
+     * Ẩn chỉ ảnh hưởng việc học (học viên không mở được), không ảnh hưởng phần giới thiệu này.
+     */
     public CoursePurchaseResponse coursePurchase(String email, Long courseId) {
         User student = student(email);
         Course course =
@@ -215,14 +219,13 @@ public class OrderService {
                         .orElse(null);
         List<PreviewWeek> preview =
                 weeks.findAllByCourseIdOrderByWeekNumberAsc(courseId).stream()
-                        .filter(w -> w.getStatus() == CourseWeek.Status.PUBLISHED)
                         .map(w -> new PreviewWeek(
                                 w.getWeekNumber(),
                                 w.getTitle(),
                                 lessons.findAllByCourseWeekIdOrderBySortOrderAsc(w.getId()).stream()
-                                        .filter(l -> l.getStatus() == Lesson.Status.PUBLISHED)
                                         .map(Lesson::getTitle)
-                                        .toList()))
+                                        .toList(),
+                                w.getStatus() != CourseWeek.Status.PUBLISHED))
                         .toList();
         long lessonCount = preview.stream().mapToLong(w -> w.lessons().size()).sum();
         long price = course.getPrice() == null ? 0 : course.getPrice();

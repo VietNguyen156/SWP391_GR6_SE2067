@@ -3,9 +3,9 @@ import { levelLabel } from "./courseFormModel";
 import { formatMoney } from "../../utils/format";
 
 /** Card khóa học cho học viên: bấm cả card để mở khóa học. */
-export default function CourseCard({ course }) {
+export default function CourseCard({ course, to }) {
   return (
-    <Link className="sc-course-card" to={`/courses/${course.id}`}>
+    <Link className="sc-course-card" to={to || `/courses/${course.id}`}>
       <span className="sc-course-cover">
         {course.thumbnailUrl ? (
           <img src={course.thumbnailUrl} alt="" loading="lazy" />

@@ -94,8 +94,7 @@ export function LockedPreview({ weeks }) {
           <li key={week.weekNumber}>
             <h3>
               <span>Tuần {week.weekNumber}</span>
-              {week.title}
-            </h3>
+              {week.title}            </h3>
             <ul>
               {week.lessons.map((lesson, index) => (
                 <li key={index}>

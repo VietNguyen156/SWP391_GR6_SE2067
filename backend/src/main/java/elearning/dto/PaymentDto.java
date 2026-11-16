@@ -99,7 +99,8 @@ public final class PaymentDto {
             /** QR mẫu 10.000đ, nội dung TPTEST01 — admin quét thử trước khi mở bán. */
             String sampleQrImageUrl) {}
 
-    public record PreviewWeek(Integer weekNumber, String title, List<String> lessons) {}
+    /** upcoming: tuần đang ẩn, vẫn giới thiệu trước khi mua nhưng chưa mở để học. */
+    public record PreviewWeek(Integer weekNumber, String title, List<String> lessons, boolean upcoming) {}
 
     /** Trạng thái mua khóa học của học viên ở trang khóa học. */
     public record CoursePurchaseResponse(
