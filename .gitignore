@@ -1,0 +1,12 @@
+# Local configuration
+.env
+.env.*
+!.env.example
+
+# Generated files
+**/node_modules/
+**/dist/
+**/target/
+**/schema-backups/
+*.log
+.DS_Store

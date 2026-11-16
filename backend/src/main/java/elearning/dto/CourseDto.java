@@ -63,8 +63,26 @@ public final class CourseDto {
     public record LessonCompletionResponse(
             Long lessonId, String status, BigDecimal progressPercent, LocalDateTime completedAt) {}
 
-    /** Một học liệu bắt buộc phải nộp để hoàn thành bài: type LISTENING / READING / SPEAKING. */
+    /** Một học liệu bắt buộc phải nộp để hoàn thành bài: type QUIZ / LISTENING / SPEAKING. */
     public record CompletionRequirement(String type, Long id, String title, boolean done) {}
+
+    public record LessonContentRequest(
+            @NotNull LessonContent.Type contentType,
+            @Size(max = 200) String title,
+            String body,
+            @Size(max = 1000) String resourceUrl) {}
+
+    public record LessonContentResponse(
+            Long id,
+            Long lessonId,
+            String contentType,
+            String title,
+            String body,
+            String resourceUrl,
+            Integer sortOrder,
+            String status,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt) {}
 
     public record LessonRequest(
             @Positive Long courseWeekId,
@@ -88,6 +106,8 @@ public final class CourseDto {
             BigDecimal progressPercent,
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
+            /** Bài giảng của bài học (text / video / PDF...). */
+            List<LessonContentResponse> contents,
             /** Toàn bộ học liệu của bài học theo thứ tự hiển thị. */
             List<elearning.dto.CurriculumDto.WeekSummary.ContentRef> materials,
             /** Điều kiện hoàn thành bài (chỉ có ở góc nhìn học viên). */

@@ -14,6 +14,7 @@ import elearning.entity.LearningHistory;
 import elearning.entity.CourseWeek;
 import elearning.entity.Lesson;
 import elearning.entity.LessonProgress;
+import elearning.entity.QuizAttempt;
 import elearning.entity.StudentGrammarProgress;
 import elearning.entity.StudentLearningProgress;
 import elearning.entity.User;
@@ -26,12 +27,12 @@ import elearning.repository.FlashcardProgressRepository;
 import elearning.repository.LearningHistoryRepository;
 import elearning.repository.LessonProgressRepository;
 import elearning.repository.LessonRepository;
+import elearning.repository.QuizAttemptRepository;
 import elearning.repository.StudentGrammarProgressRepository;
 import elearning.repository.StudentLearningProgressRepository;
 import elearning.repository.UserRepository;
 
 import org.springframework.stereotype.Service;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.*;
@@ -51,7 +52,7 @@ public class ProgressService {
     private final CourseRepository courses;
     private final StudentGrammarProgressRepository grammarProgress;
     private final FlashcardProgressRepository flashcardProgress;
-    private final JdbcTemplate db;
+    private final QuizAttemptRepository attempts;
     private final UserRepository users;
 
     public ProgressService(
@@ -73,6 +74,7 @@ public class ProgressService {
         courses = c;
         grammarProgress = gp;
         flashcardProgress = fp;
+        attempts = a;
         this.db = db;
         users = u;
     }

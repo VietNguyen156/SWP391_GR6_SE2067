@@ -50,12 +50,6 @@ public class TeacherCourseController {
         return service.update(principal.getName(), id, request);
     }
 
-    @PostMapping("/{id}/duplicate")
-    @ResponseStatus(HttpStatus.CREATED)
-    public CourseResponse duplicate(Principal principal, @PathVariable Long id) {
-        return service.duplicate(principal.getName(), id);
-    }
-
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(Principal principal, @PathVariable Long id) {
