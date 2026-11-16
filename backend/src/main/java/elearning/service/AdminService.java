@@ -8,7 +8,6 @@ import elearning.dto.AdminDto.AdminUserResponse;
 import elearning.dto.AdminDto.UserStatusUpdateRequest;
 import elearning.entity.Course;
 import elearning.entity.LessonProgress;
-import elearning.entity.QuizAttempt;
 import elearning.entity.User;
 import elearning.entity.UserRole;
 import elearning.entity.UserStatus;
@@ -16,11 +15,10 @@ import elearning.exception.ContentNotFoundException;
 import elearning.repository.CourseRepository;
 import elearning.repository.LessonProgressRepository;
 import elearning.repository.LessonRepository;
-import elearning.repository.QuizAttemptRepository;
-import elearning.repository.QuizRepository;
 import elearning.repository.UserRepository;
 
 import org.springframework.stereotype.Service;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.*;
@@ -33,23 +31,20 @@ public class AdminService {
     private final UserRepository users;
     private final CourseRepository courses;
     private final LessonRepository lessons;
-    private final QuizRepository quizzes;
     private final LessonProgressRepository lessonProgress;
-    private final QuizAttemptRepository attempts;
+    private final JdbcTemplate db;
 
     public AdminService(
             UserRepository u,
             CourseRepository c,
             LessonRepository l,
-            QuizRepository q,
             LessonProgressRepository lp,
-            QuizAttemptRepository a) {
+            JdbcTemplate db) {
         users = u;
         courses = c;
         lessons = l;
-        quizzes = q;
         lessonProgress = lp;
-        attempts = a;
+        this.db = db;
     }
 
     @Transactional(readOnly = true)
@@ -59,7 +54,7 @@ public class AdminService {
                 users.countByRole(UserRole.STUDENT),
                 users.countByRole(UserRole.TEACHER),
                 courses.count(),
-                quizzes.count(),
+                db.queryForObject("SELECT COUNT(*) FROM course_tests", Long.class),
                 lessons.count());
     }
 
@@ -92,11 +87,11 @@ public class AdminService {
     public AdminCourseResponse updateCourseStatus(Long id, AdminCourseStatusRequest request) {
         Course course = findCourse(id);
         Course.Status previousStatus = course.getStatus();
+        // Khóa học chỉ còn Đang hiển thị / Đã ẩn. "Đã ẩn" lưu DRAFT, giống khi giáo viên ẩn khóa.
         Course.Status status =
                 switch (request.status()) {
                     case ACTIVE -> Course.Status.PUBLISHED;
-                    case HIDDEN -> Course.Status.HIDDEN;
-                    case ARCHIVED -> Course.Status.ARCHIVED;
+                    case HIDDEN -> Course.Status.DRAFT;
                 };
         course.setStatus(status);
         if (status == Course.Status.PUBLISHED && previousStatus != Course.Status.PUBLISHED) {
@@ -114,19 +109,10 @@ public class AdminService {
 
     @Transactional(readOnly = true)
     public AdminReportResponse report() {
-        List<QuizAttempt> finished =
-                attempts.findAllByStatusNotOrderByStartTimeDesc(QuizAttempt.Status.IN_PROGRESS);
-        List<BigDecimal> scores =
-                finished.stream().map(QuizAttempt::getScore).filter(Objects::nonNull).toList();
-        BigDecimal average =
-                scores.isEmpty()
-                        ? BigDecimal.ZERO
-                        : scores.stream()
-                                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                                .divide(BigDecimal.valueOf(scores.size()), 2, RoundingMode.HALF_UP);
+        BigDecimal average = db.queryForObject("SELECT COALESCE(AVG(100.0*earned_points/NULLIF(total_points,0)),0) FROM test_attempts WHERE status='GRADED'", BigDecimal.class);
         return new AdminReportResponse(
                 lessonProgress.countByStatus(LessonProgress.Status.COMPLETED),
-                attempts.countByStatusNot(QuizAttempt.Status.IN_PROGRESS),
+                db.queryForObject("SELECT COUNT(*) FROM test_attempts WHERE status<>'IN_PROGRESS'", Long.class),
                 average,
                 users.countByStatus(UserStatus.ACTIVE));
     }
@@ -146,7 +132,8 @@ public class AdminService {
 
     private AdminCourseResponse courseResponse(Course c) {
         User t = c.getCreatedByTeacher();
-        String status = c.getStatus() == Course.Status.PUBLISHED ? "ACTIVE" : c.getStatus().name();
+        // Mọi trạng thái khác PUBLISHED (DRAFT, HIDDEN, ARCHIVED cũ) đều là "Đã ẩn" với admin.
+        String status = c.getStatus() == Course.Status.PUBLISHED ? "ACTIVE" : "HIDDEN";
         return new AdminCourseResponse(
                 c.getId(),
                 c.getTitle(),

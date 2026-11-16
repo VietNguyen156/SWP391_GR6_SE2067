@@ -1,7 +1,6 @@
 package elearning.dto;
 
 import elearning.entity.Course;
-import elearning.entity.LessonContent;
 import elearning.validation.VisibilityStatus;
 
 import jakarta.validation.constraints.Max;

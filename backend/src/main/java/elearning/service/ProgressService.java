@@ -64,7 +64,7 @@ public class ProgressService {
             CourseRepository c,
             StudentGrammarProgressRepository gp,
             FlashcardProgressRepository fp,
-            QuizAttemptRepository a,
+            JdbcTemplate db,
             UserRepository u) {
         courseProgress = cp;
         history = h;
@@ -75,6 +75,7 @@ public class ProgressService {
         grammarProgress = gp;
         flashcardProgress = fp;
         attempts = a;
+        this.db = db;
         users = u;
     }
 
@@ -120,17 +121,6 @@ public class ProgressService {
         incrementDaily(student, 1, 0, 0);
     }
 
-    public void recordQuizCompleted(QuizAttempt attempt) {
-        LocalDateTime now = Optional.ofNullable(attempt.getEndTime()).orElse(LocalDateTime.now());
-        recordHistory(
-                attempt.getStudent(),
-                LearningHistory.ActivityType.QUIZ,
-                attempt.getId(),
-                attempt.getQuiz().getTitle(),
-                now);
-        long seconds = Math.max(1, Duration.between(attempt.getStartTime(), now).getSeconds());
-        incrementDaily(attempt.getStudent(), (int) Math.max(1, Math.ceil(seconds / 60.0)), 0, 1);
-    }
 
     public OverallProgressResponse overall(String email) {
         User student = student(email);
@@ -161,15 +151,7 @@ public class ProgressService {
                                                 x.getMemoryStatus()
                                                         != FlashcardProgress.MemoryStatus.NEW)
                                 .count();
-        List<QuizAttempt> finished =
-                attempts.findAllByStudentIdAndStatusNotOrderByStartTimeDesc(
-                        student.getId(), QuizAttempt.Status.IN_PROGRESS);
-        BigDecimal averageScore =
-                average(
-                        finished.stream()
-                                .map(QuizAttempt::getScore)
-                                .filter(Objects::nonNull)
-                                .toList());
+        BigDecimal averageScore = db.queryForObject("SELECT COALESCE(AVG(100.0*earned_points/NULLIF(total_points,0)),0) FROM test_attempts WHERE student_id=? AND status='GRADED'", BigDecimal.class, student.getId());
         return new OverallProgressResponse(
                 overall,
                 completed,
@@ -238,7 +220,7 @@ public class ProgressService {
                 monthly,
                 currentMonth.stream().mapToInt(DailyLearningStatistic::getLearningMinutes).sum(),
                 currentMonth.stream().mapToInt(DailyLearningStatistic::getLessonsCompleted).sum(),
-                currentMonth.stream().mapToInt(DailyLearningStatistic::getQuizCompleted).sum());
+                currentMonth.stream().mapToInt(DailyLearningStatistic::getTestCompleted).sum());
     }
 
     private StudentLearningProgress syncCourse(
@@ -299,7 +281,7 @@ public class ProgressService {
     }
 
     private void incrementDaily(
-            User student, int minutes, int completedLessons, int completedQuizzes) {
+            User student, int minutes, int completedLessons, int completedTests) {
         LocalDate date = LocalDate.now();
         DailyLearningStatistic item =
                 daily.findByStudentIdAndLearningDate(student.getId(), date)
@@ -308,7 +290,7 @@ public class ProgressService {
         item.setLearningDate(date);
         item.setLearningMinutes(item.getLearningMinutes() + minutes);
         item.setLessonsCompleted(item.getLessonsCompleted() + completedLessons);
-        item.setQuizCompleted(item.getQuizCompleted() + completedQuizzes);
+        item.setTestCompleted(item.getTestCompleted() + completedTests);
         daily.save(item);
     }
 
@@ -322,7 +304,7 @@ public class ProgressService {
                                 x ->
                                         x.getLearningMinutes() > 0
                                                 || x.getLessonsCompleted() > 0
-                                                || x.getQuizCompleted() > 0)
+                                                || x.getTestCompleted() > 0)
                         .map(DailyLearningStatistic::getLearningDate)
                         .collect(Collectors.toSet());
         LocalDate day =
@@ -347,7 +329,7 @@ public class ProgressService {
                                     date,
                                     x.getLearningMinutes(),
                                     x.getLessonsCompleted(),
-                                    x.getQuizCompleted()));
+                                    x.getTestCompleted()));
         }
         return result;
     }

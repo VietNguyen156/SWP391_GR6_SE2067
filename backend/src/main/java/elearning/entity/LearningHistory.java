@@ -15,7 +15,7 @@ public class LearningHistory {
         GRAMMAR,
         VOCABULARY,
         FLASHCARD,
-        QUIZ
+        TEST
     }
 
     @Id

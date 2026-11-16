@@ -26,8 +26,8 @@ public class DailyLearningStatistic {
     @Column(name = "lessons_completed", nullable = false)
     private Integer lessonsCompleted = 0;
 
-    @Column(name = "quiz_completed", nullable = false)
-    private Integer quizCompleted = 0;
+    @Column(name = "test_completed", nullable = false)
+    private Integer testCompleted = 0;
 
     public Long getId() {
         return id;
@@ -65,11 +65,11 @@ public class DailyLearningStatistic {
         lessonsCompleted = v;
     }
 
-    public Integer getQuizCompleted() {
-        return quizCompleted;
+    public Integer getTestCompleted() {
+        return testCompleted;
     }
 
-    public void setQuizCompleted(Integer v) {
-        quizCompleted = v;
+    public void setTestCompleted(Integer v) {
+        testCompleted = v;
     }
 }

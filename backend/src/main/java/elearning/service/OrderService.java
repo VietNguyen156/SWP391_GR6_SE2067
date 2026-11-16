@@ -32,12 +32,12 @@ import elearning.repository.CourseWeekRepository;
 import elearning.repository.LessonRepository;
 import elearning.repository.OrderStatusHistoryRepository;
 import elearning.repository.PaymentReceiptRepository;
-import elearning.repository.QuizRepository;
 import elearning.repository.UserRepository;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -79,7 +79,7 @@ public class OrderService {
     private final ClassEnrollmentRepository enrollments;
     private final CourseWeekRepository weeks;
     private final LessonRepository lessons;
-    private final QuizRepository quizzes;
+    private final JdbcTemplate db;
     private final PaymentSettingsService settings;
     private final MediaStorageService media;
 
@@ -93,7 +93,7 @@ public class OrderService {
             ClassEnrollmentRepository enrollments,
             CourseWeekRepository weeks,
             LessonRepository lessons,
-            QuizRepository quizzes,
+            JdbcTemplate db,
             PaymentSettingsService settings,
             MediaStorageService media) {
         this.orders = orders;
@@ -105,7 +105,7 @@ public class OrderService {
         this.enrollments = enrollments;
         this.weeks = weeks;
         this.lessons = lessons;
-        this.quizzes = quizzes;
+        this.db = db;
         this.settings = settings;
         this.media = media;
     }
@@ -173,7 +173,10 @@ public class OrderService {
         if (expireIfOverdue(order)) throw new IllegalArgumentException("Đơn đã hết hạn thanh toán. Vui lòng tạo đơn mới.");
         if (order.getStatus() != Status.PENDING)
             throw new IllegalArgumentException("Chỉ báo đã chuyển khoản cho đơn đang chờ thanh toán");
-        if (proof != null && !proof.isEmpty()) order.setProofUrl(media.storeImage(proof, "payment-proofs", MAX_PROOF_BYTES));
+        // Bắt buộc có ảnh biên lai để admin đối chiếu.
+        if (proof == null || proof.isEmpty())
+            throw new IllegalArgumentException("Vui lòng tải lên ảnh biên lai chuyển khoản");
+        order.setProofUrl(media.storeImage(proof, "payment-proofs", MAX_PROOF_BYTES));
         order.setStudentNote(clean(note));
         order.setStudentReportedAt(LocalDateTime.now());
         transition(order, Status.AWAITING_CONFIRMATION, student, "Học viên báo đã chuyển khoản");
@@ -234,7 +237,7 @@ public class OrderService {
                 open == null ? null : response(open, false),
                 lastClosed == null ? null : response(lastClosed, false),
                 lessonCount,
-                quizzes.countQuestionsOfPublishedCourseQuizzes(courseId),
+                db.queryForObject("SELECT COALESCE(SUM(s.question_count),0) FROM test_sections s JOIN test_versions v ON v.id=s.version_id JOIN course_tests t ON t.id=v.test_id WHERE t.course_id=? AND t.status='PUBLISHED' AND v.version_no=t.current_version_no", Long.class, courseId),
                 preview);
     }
 

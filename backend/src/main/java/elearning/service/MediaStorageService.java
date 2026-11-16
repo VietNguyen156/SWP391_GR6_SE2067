@@ -1,19 +1,25 @@
 package elearning.service;
 
+import org.apache.pdfbox.Loader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.dao.DataAccessException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -24,6 +30,12 @@ public class MediaStorageService {
             List.of(".mp3", ".wav", ".m4a", ".webm", ".ogg");
     private static final List<String> IMAGE_EXTENSIONS = List.of(".jpg", ".jpeg", ".png", ".webp");
     private final Path root;
+    private JdbcTemplate database;
+
+    @Autowired(required = false)
+    public void setDatabase(JdbcTemplate database) {
+        this.database = database;
+    }
 
     public MediaStorageService(
             @Value("${app.upload-dir:${user.home}/toeic-path-data/uploads}") String dir) {
@@ -58,6 +70,13 @@ public class MediaStorageService {
             throw new IllegalArgumentException("Chỉ hỗ trợ MP3, WAV, M4A, WEBM hoặc OGG");
         }
 
+        byte[] head;
+        try (InputStream in = file.getInputStream()) {
+            head = in.readNBytes(16);
+        }
+        if (!contentMatches(ext, head, head.length))
+            throw new IllegalArgumentException("Tệp âm thanh bị hỏng hoặc không đúng định dạng");
+
         return write(file, category, ext);
     }
 
@@ -75,6 +94,131 @@ public class MediaStorageService {
         if (!IMAGE_EXTENSIONS.contains(ext))
             throw new IllegalArgumentException("Chỉ hỗ trợ ảnh JPG, PNG hoặc WEBP");
         return write(file, category, ext);
+    }
+
+    /** Định dạng tệp đính kèm Ngữ pháp được phép: đuôi file → MIME trả về khi xem/tải. */
+    static final Map<String, String> ATTACHMENT_TYPES =
+            Map.ofEntries(
+                    Map.entry(".pdf", "application/pdf"),
+                    Map.entry(".doc", "application/msword"),
+                    Map.entry(
+                            ".docx",
+                            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+                    Map.entry(".ppt", "application/vnd.ms-powerpoint"),
+                    Map.entry(
+                            ".pptx",
+                            "application/vnd.openxmlformats-officedocument.presentationml.presentation"),
+                    Map.entry(".xls", "application/vnd.ms-excel"),
+                    Map.entry(
+                            ".xlsx",
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+                    Map.entry(".png", "image/png"),
+                    Map.entry(".jpg", "image/jpeg"),
+                    Map.entry(".jpeg", "image/jpeg"),
+                    Map.entry(".webp", "image/webp"),
+                    Map.entry(".mp3", "audio/mpeg"),
+                    Map.entry(".m4a", "audio/mp4"),
+                    Map.entry(".wav", "audio/wav"),
+                    Map.entry(".mp4", "video/mp4"));
+
+    public static final long MAX_ATTACHMENT_BYTES = 20L * 1024 * 1024;
+
+    public record StoredFile(String url, String fileName, String mimeType, long sizeBytes) {}
+
+    /**
+     * Tệp đính kèm Ngữ pháp: kiểm tra cả đuôi file lẫn nội dung thật (magic bytes), không tin
+     * Content-Type từ trình duyệt. Tên trên đĩa là UUID; tên gốc trả về để lưu vào file_name.
+     */
+    public StoredFile storeAttachment(MultipartFile file, String category) throws IOException {
+        return storeAttachment(
+                file,
+                category,
+                ATTACHMENT_TYPES.keySet(),
+                "Định dạng không được hỗ trợ. Chỉ nhận PDF, Word, PowerPoint, Excel, ảnh (PNG, JPG, WEBP), âm thanh (MP3, M4A, WAV) hoặc video MP4");
+    }
+
+    /** Như trên nhưng chỉ nhận các đuôi trong `allowed` (vd. Reading: pdf, Word, ảnh). */
+    public StoredFile storeAttachment(
+            MultipartFile file, String category, java.util.Set<String> allowed, String typeError)
+            throws IOException {
+        if (file == null || file.isEmpty()) throw new IllegalArgumentException("Vui lòng chọn file");
+        if (file.getSize() > MAX_ATTACHMENT_BYTES)
+            throw new IllegalArgumentException("File vượt quá 20 MB. Vui lòng chọn file nhỏ hơn");
+        String original =
+                Paths.get(file.getOriginalFilename() == null ? "" : file.getOriginalFilename())
+                        .getFileName()
+                        .toString();
+        String ext = extension(original);
+        String mime = allowed.contains(ext) ? ATTACHMENT_TYPES.get(ext) : null;
+        if (mime == null) throw new IllegalArgumentException(typeError);
+        byte[] head = new byte[16];
+        int read;
+        try (var in = file.getInputStream()) {
+            read = in.readNBytes(head, 0, head.length);
+        }
+        if (!contentMatches(ext, head, read))
+            throw new IllegalArgumentException(
+                    "Nội dung file không khớp với đuôi " + ext + ". Vui lòng chọn đúng file");
+        if (".pdf".equals(ext)) validatePdf(file.getBytes());
+        String url = write(file, category, ext);
+        return new StoredFile(url, original.length() > 255 ? original.substring(0, 255) : original, mime, file.getSize());
+    }
+
+    /** So chữ ký đầu file với đuôi. ponytail: docx/pptx/xlsx chỉ kiểm tra là file ZIP. */
+    static boolean contentMatches(String ext, byte[] b, int n) {
+        return switch (ext) {
+            case ".pdf" -> starts(b, n, "%PDF-");
+            case ".doc", ".ppt", ".xls" ->
+                    starts(b, n, 0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1);
+            case ".docx", ".pptx", ".xlsx" -> starts(b, n, 0x50, 0x4B, 0x03, 0x04);
+            case ".png" -> starts(b, n, 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A);
+            case ".jpg", ".jpeg" -> starts(b, n, 0xFF, 0xD8, 0xFF);
+            case ".webp" -> starts(b, n, "RIFF") && at(b, n, 8, "WEBP");
+            case ".wav" -> starts(b, n, "RIFF") && at(b, n, 8, "WAVE");
+            case ".mp3" ->
+                    starts(b, n, "ID3") || (n >= 2 && (b[0] & 0xFF) == 0xFF && (b[1] & 0xE0) == 0xE0);
+            case ".mp4", ".m4a" -> at(b, n, 4, "ftyp");
+            case ".webm" -> starts(b, n, 0x1A, 0x45, 0xDF, 0xA3);
+            case ".ogg" -> starts(b, n, "OggS");
+            default -> false;
+        };
+    }
+
+    private static boolean starts(byte[] b, int n, String text) {
+        return at(b, n, 0, text);
+    }
+
+    private static boolean at(byte[] b, int n, int offset, String text) {
+        byte[] t = text.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+        if (n < offset + t.length) return false;
+        for (int i = 0; i < t.length; i++) if (b[offset + i] != t[i]) return false;
+        return true;
+    }
+
+    private static boolean starts(byte[] b, int n, int... sig) {
+        if (n < sig.length) return false;
+        for (int i = 0; i < sig.length; i++) if ((b[i] & 0xFF) != sig[i]) return false;
+        return true;
+    }
+
+    /** Xóa file đã lưu; không có file thì bỏ qua. */
+    public void delete(String storedUrl) {
+        if (database != null) {
+            try {
+                Integer references = database.queryForObject(
+                        "SELECT COUNT(*) FROM test_sections s JOIN test_versions v ON v.id=s.version_id WHERE v.status IN ('PUBLISHED','SUPERSEDED') AND JSON_SEARCH(s.snapshot_json,'one',?) IS NOT NULL",
+                        Integer.class, storedUrl);
+                if (references != null && references > 0) return;
+            } catch (DataAccessException error) {
+                log.warn("Cannot verify whether Test still uses media {}; preserving file", storedUrl, error);
+                return;
+            }
+        }
+        try {
+            Files.deleteIfExists(resolveStoredPath(storedUrl));
+        } catch (IOException | IllegalArgumentException e) {
+            log.warn("Could not delete media file {}: {}", storedUrl, e.getMessage());
+        }
     }
 
     private String write(MultipartFile file, String category, String ext) throws IOException {
@@ -103,14 +247,39 @@ public class MediaStorageService {
             Resource resource = new UrlResource(path.toUri());
             if (!resource.exists() || !resource.isReadable()) {
                 log.warn(
-                        "Recording file is missing. storedUrl={}, expectedPath={}",
+                        "Media file is missing. storedUrl={}, expectedPath={}",
                         storedUrl,
                         path);
-                throw new IllegalArgumentException("Không tìm thấy file ghi âm trên máy chủ");
+                throw new IllegalArgumentException("Không tìm thấy tệp trên máy chủ");
+            }
+            String ext = extension(path.getFileName().toString());
+            if (".pdf".equals(ext)) {
+                try {
+                    validatePdf(Files.readAllBytes(path));
+                } catch (IOException e) {
+                    throw new IllegalArgumentException("Không thể đọc tệp PDF trên máy chủ", e);
+                }
+            } else if (ALLOWED_EXTENSIONS.contains(ext)) {
+                try (InputStream in = Files.newInputStream(path)) {
+                    byte[] head = in.readNBytes(16);
+                    if (!contentMatches(ext, head, head.length))
+                        throw new IllegalArgumentException("Tệp âm thanh bị hỏng hoặc không đúng định dạng");
+                } catch (IOException e) {
+                    throw new IllegalArgumentException("Không thể đọc tệp âm thanh trên máy chủ", e);
+                }
             }
             return resource;
         } catch (java.net.MalformedURLException e) {
-            throw new IllegalArgumentException("Không thể đọc file ghi âm", e);
+            throw new IllegalArgumentException("Không thể đọc tệp trên máy chủ", e);
+        }
+    }
+
+    private static void validatePdf(byte[] bytes) {
+        try (var document = Loader.loadPDF(bytes)) {
+            if (document.getNumberOfPages() < 1)
+                throw new IllegalArgumentException("Tệp PDF không có trang nào");
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Tệp PDF bị hỏng hoặc không thể mở. Vui lòng tải lên bản gốc hợp lệ", e);
         }
     }
 
@@ -125,6 +294,16 @@ public class MediaStorageService {
         } catch (Exception e) {
             return "application/octet-stream";
         }
+        String ext = extension(path.getFileName().toString());
+        String audioType = switch (ext) {
+            case ".mp3" -> "audio/mpeg";
+            case ".wav" -> "audio/wav";
+            case ".m4a" -> "audio/mp4";
+            case ".webm" -> "audio/webm";
+            case ".ogg" -> "audio/ogg";
+            default -> null;
+        };
+        if (audioType != null) return audioType;
         try {
             String type = Files.probeContentType(path);
             return type == null ? "application/octet-stream" : type;

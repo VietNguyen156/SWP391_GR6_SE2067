@@ -12,7 +12,7 @@ public final class ProgressDto {
             LocalDate date,
             Integer learningMinutes,
             Integer lessonsCompleted,
-            Integer quizCompleted) {}
+            Integer testCompleted) {}
 
     public record LearningHistoryResponse(
             Long id,
@@ -26,7 +26,7 @@ public final class ProgressDto {
             List<DailyStatisticResponse> monthly,
             Integer monthlyLearningMinutes,
             Integer monthlyLessonsCompleted,
-            Integer monthlyQuizCompleted) {}
+            Integer monthlyTestCompleted) {}
 
     public record LessonProgressSummary(
             Long courseId,
@@ -43,7 +43,7 @@ public final class ProgressDto {
             Integer totalLesson,
             Integer grammarCompleted,
             Integer flashcardsReviewed,
-            BigDecimal quizAverageScore,
+            BigDecimal testAverageScore,
             Integer learningStreak,
             List<LessonProgressSummary> courses) {}
 
@@ -54,7 +54,7 @@ public final class ProgressDto {
             Integer studentCount,
             BigDecimal averageProgress,
             BigDecimal classCompletionRate,
-            BigDecimal averageQuizScore,
+            BigDecimal averageTestScore,
             Integer completedLessons) {}
 
     public record TeacherDashboardResponse(
@@ -63,6 +63,6 @@ public final class ProgressDto {
             Integer totalStudents,
             BigDecimal averageProgress,
             BigDecimal classCompletionRate,
-            BigDecimal averageQuizScore,
+            BigDecimal averageTestScore,
             List<TeacherCourseStatisticResponse> courses) {}
 }
